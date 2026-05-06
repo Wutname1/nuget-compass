@@ -587,6 +587,74 @@ body {
   color: var(--vscode-descriptionForeground);
 }
 
+.badge-license {
+  background: var(--vscode-charts-green, rgba(60, 160, 90, 0.22));
+  color: var(--vscode-foreground);
+  font-size: 0.7rem;
+}
+
+.badge-notes {
+  background: var(--vscode-statusBarItem-prominentBackground, rgba(0, 122, 204, 0.18));
+  color: var(--vscode-foreground);
+  font-size: 0.7rem;
+  cursor: help;
+}
+
+.version-size {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sources-footer {
+  border-top: 1px solid var(--vscode-widget-border, transparent);
+  background: var(--vscode-sideBar-background, transparent);
+  margin-top: auto;
+}
+
+.sources-footer > summary {
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.75rem;
+}
+
+.sources-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.75rem 0.5rem;
+  font-size: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.sources-list li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.source-name {
+  font-weight: 500;
+}
+
+.source-url {
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.7rem;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-disabled .source-name {
+  color: var(--vscode-disabledForeground);
+}
+
+.badge-source-off {
+  background: var(--vscode-disabledForeground, rgba(128, 128, 128, 0.2));
+}
+
 .muted {
   color: var(--vscode-descriptionForeground);
 }

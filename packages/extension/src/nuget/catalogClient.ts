@@ -21,6 +21,14 @@ export interface PackageVersionMetadata {
   listed: boolean;
   /** TFMs declared in dependencyGroups; empty array if data is missing. */
   supportedFrameworks: string[];
+  licenseExpression?: string;
+  licenseUrl?: string;
+  projectUrl?: string;
+  releaseNotes?: string;
+  description?: string;
+  authors?: string;
+  /** .nupkg size in bytes when the catalog reports it. */
+  packageSize?: number;
 }
 
 export interface CatalogClientOptions {
@@ -244,6 +252,13 @@ function leafToMetadata(leaf: import('./registration.js').RegistrationLeaf): Pac
     published: ce.published,
     listed: ce.listed ?? true,
     supportedFrameworks,
+    licenseExpression: ce.licenseExpression,
+    licenseUrl: ce.licenseUrl,
+    projectUrl: ce.projectUrl,
+    releaseNotes: ce.releaseNotes,
+    description: ce.description,
+    authors: ce.authors,
+    packageSize: ce.packageSize,
   };
 }
 

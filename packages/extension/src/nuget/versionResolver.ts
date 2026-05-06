@@ -34,6 +34,13 @@ export async function resolveAvailableVersions(options: ResolveOptions): Promise
       ? true
       : isVersionCompatibleWithProject(options.projectTargetFrameworks, m.supportedFrameworks),
     isPrerelease: isPrereleaseString(m.version),
+    licenseExpression: m.licenseExpression,
+    licenseUrl: m.licenseUrl,
+    projectUrl: m.projectUrl,
+    releaseNotes: m.releaseNotes,
+    description: m.description,
+    authors: m.authors,
+    packageSize: m.packageSize,
   }));
 
   const newestAllowed = findNewestAllowedFromVersions(versions, options);

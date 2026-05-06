@@ -19,6 +19,7 @@ import { scanDeprecations } from '../dotnet/deprecated.js';
 import { addPackage } from '../dotnet/addPackage.js';
 import { removePackage } from '../dotnet/removePackage.js';
 import { searchPackages } from '../dotnet/searchPackages.js';
+import { listSources } from '../dotnet/listSources.js';
 
 export class PackagesViewProvider implements vscode.WebviewViewProvider {
   static readonly viewType = 'nuget-compass.packages';
@@ -73,6 +74,15 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       this.lastProjects = result.projects;
       this.lastRowsByProject.clear();
       this.post({ type: 'host:projects', projects: result.projects });
+
+      // Surface NuGet sources alongside the project list. Best-effort; if it
+      // fails (e.g. dotnet missing) we already showed a banner during scan.
+      const cwd = result.projects[0] ? path.dirname(result.projects[0].path) : undefined;
+      if (cwd) {
+        listSources(cwd)
+          .then((sources) => this.post({ type: 'host:sources', sources }))
+          .catch((err: unknown) => logger.warn(`listSources failed: ${describeReason(err)}`));
+      }
 
       // First paint: send rows without newestAllowed so the UI shows packages
       // immediately. enrichProject fills in newestAllowed + badges in the

@@ -70,6 +70,11 @@ export interface HostSearchResultsMessage {
   }>;
 }
 
+export interface HostSourcesMessage {
+  type: 'host:sources';
+  sources: Array<{ name: string; url: string; enabled: boolean }>;
+}
+
 export type HostMessage =
   | HostInitMessage
   | HostProjectsMessage
@@ -77,6 +82,7 @@ export type HostMessage =
   | HostPackageVersionsMessage
   | HostProjectStatusMessage
   | HostSearchResultsMessage
+  | HostSourcesMessage
   | HostErrorMessage
   | HostStatusMessage;
 

@@ -85,6 +85,22 @@ export function App(): JSX.Element {
           dispatch({ type: 'toggleExpanded', projectPath, packageId })
         }
       />
+      {state.sources.length > 1 ? (
+        <details className="sources-footer">
+          <summary>
+            <span className="muted">Configured sources ({state.sources.filter((s) => s.enabled).length} active)</span>
+          </summary>
+          <ul className="sources-list">
+            {state.sources.map((src) => (
+              <li key={src.name} className={src.enabled ? '' : 'source-disabled'}>
+                <span className="source-name">{src.name}</span>
+                <span className="muted source-url">{src.url}</span>
+                {!src.enabled ? <span className="badge badge-source-off">disabled</span> : null}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
     </div>
   );
 }

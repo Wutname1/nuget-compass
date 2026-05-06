@@ -27,6 +27,7 @@ export interface AppState {
   status: 'idle' | 'scanning' | 'fetching';
   error?: { message: string; detail?: string };
   search: { query: string; results: SearchHit[]; visible: boolean };
+  sources: Array<{ name: string; url: string; enabled: boolean }>;
 }
 
 export const initialState: AppState = {
@@ -38,6 +39,7 @@ export const initialState: AppState = {
   expanded: {},
   status: 'idle',
   search: { query: '', results: [], visible: false },
+  sources: [],
 };
 
 export type Action =
@@ -103,6 +105,8 @@ function applyHostMessage(state: AppState, msg: HostMessage): AppState {
       };
     case 'host:searchResults':
       return { ...state, search: { ...state.search, query: msg.query, results: msg.results } };
+    case 'host:sources':
+      return { ...state, sources: msg.sources };
     case 'host:status':
       return { ...state, status: msg.status };
     case 'host:error':

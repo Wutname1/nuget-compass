@@ -58,6 +58,16 @@ export interface RegistrationCatalogEntry {
   version: string;
   listed?: boolean;
   published?: string;
+  licenseExpression?: string;
+  licenseUrl?: string;
+  projectUrl?: string;
+  iconUrl?: string;
+  /** Long-form release notes when the package author included them. */
+  releaseNotes?: string;
+  /** Total package size in bytes (from .nupkg metadata when present). */
+  packageSize?: number;
+  description?: string;
+  authors?: string;
   dependencyGroups?: RegistrationDependencyGroup[];
 }
 

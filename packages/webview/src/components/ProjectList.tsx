@@ -358,6 +358,27 @@ function VersionList({
               {v.isCompatible && v.supportedFrameworks.length > 0 ? (
                 <span className="muted version-tfms">{v.supportedFrameworks.join(', ')}</span>
               ) : null}
+              {v.licenseExpression ? (
+                <span
+                  className="badge badge-license"
+                  title={v.licenseUrl ?? v.licenseExpression}
+                >
+                  {v.licenseExpression}
+                </span>
+              ) : null}
+              {v.packageSize !== undefined ? (
+                <span className="muted version-size" title="Package size on disk">
+                  {formatBytes(v.packageSize)}
+                </span>
+              ) : null}
+              {v.releaseNotes ? (
+                <span
+                  className="badge badge-notes"
+                  title={truncate(v.releaseNotes, 600)}
+                >
+                  notes
+                </span>
+              ) : null}
               {v.published ? (
                 <span className="muted version-date">{formatDate(v.published)}</span>
               ) : null}
@@ -367,6 +388,17 @@ function VersionList({
       })}
     </ul>
   );
+}
+
+function formatBytes(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} MB`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)} KB`;
+  return `${n} B`;
+}
+
+function truncate(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return s.slice(0, max).trimEnd() + '…';
 }
 
 function formatDate(iso: string): string {

@@ -12,6 +12,13 @@ export interface AvailableVersion {
   isCompatible: boolean;
   /** True if the version string is a SemVer prerelease. */
   isPrerelease: boolean;
+  licenseExpression?: string;
+  licenseUrl?: string;
+  projectUrl?: string;
+  releaseNotes?: string;
+  description?: string;
+  authors?: string;
+  packageSize?: number;
 }
 
 /**
