@@ -1064,7 +1064,14 @@ function DetailPanel({ pkg, context, onUpdate, onMatchVersions }) {
   return (
     <div className="detail-panel">
       <div className="detail-panel-header">
-        <div className="detail-pkg-name">{pkg.id}</div>
+        <div className="detail-pkg-name" style={{display:'flex',alignItems:'center',gap:6}}>
+          <a href={`https://www.nuget.org/packages/${pkg.id}`} target="_blank" rel="noreferrer"
+             title={`Open ${pkg.id} on nuget.org`}
+             style={{display:'inline-flex',alignItems:'center',textDecoration:'none',flexShrink:0}}>
+            <img src="../../assets/nuget-logo.svg" alt="NuGet" width="14" height="14" style={{display:'block'}} />
+          </a>
+          <span>{pkg.id}</span>
+        </div>
         <div className="detail-pkg-sub">
           {subBits.map((b, i) => <span key={i}>{i > 0 && <span style={{color:'#444',marginRight:8}}>·</span>}{b}</span>)}
         </div>

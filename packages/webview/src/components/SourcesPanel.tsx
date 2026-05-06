@@ -40,7 +40,7 @@ export function SourcesPanel({ sources }: SourcesPanelProps): JSX.Element | null
         ) : (
           <button
             type="button"
-            className="package-action"
+            className="btn-secondary"
             onClick={() => setShowAddForm(true)}
           >
             Add source
@@ -62,7 +62,7 @@ function SourceRow({ source }: { source: Source }): JSX.Element {
       <div className="source-row-actions">
         <button
           type="button"
-          className="package-action"
+          className="btn-secondary"
           onClick={() =>
             vscode.postMessage({
               type: 'view:toggleSource',
@@ -75,7 +75,7 @@ function SourceRow({ source }: { source: Source }): JSX.Element {
         </button>
         <button
           type="button"
-          className="package-action package-action-danger"
+          className="btn-secondary btn-secondary-danger"
           onClick={() =>
             vscode.postMessage({ type: 'view:removeSource', name: source.name })
           }
@@ -159,10 +159,10 @@ function AddSourceForm({ onClose }: { onClose: () => void }): JSX.Element {
         </>
       ) : null}
       <div className="add-source-buttons">
-        <button type="button" className="project-action" onClick={submit}>
+        <button type="button" className="btn-primary" onClick={submit}>
           Add
         </button>
-        <button type="button" className="package-action" onClick={onClose}>
+        <button type="button" className="btn-secondary" onClick={onClose}>
           Cancel
         </button>
       </div>

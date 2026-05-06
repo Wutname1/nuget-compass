@@ -28,6 +28,19 @@ export interface SelectedPackage {
   focusedVersion?: string;
 }
 
+/** Top-level tab in the panel. */
+export type AppTab = 'installed' | 'browse' | 'updates';
+
+/** How the Installed list is grouped. */
+export type GroupBy = 'package' | 'project';
+
+/** Toast surfaced after an async operation (update/install/etc.). */
+export interface Toast {
+  id: number;
+  kind: 'success' | 'info';
+  message: string;
+}
+
 export interface AppState {
   filters: FilterState;
   projects: Project[];
@@ -44,6 +57,14 @@ export interface AppState {
   sources: Array<{ name: string; url: string; enabled: boolean }>;
   /** README body keyed by `${packageId}@${version}`. */
   readmes: Record<string, ReadmeState>;
+  /** Active top-level tab: Installed / Browse / Updates. */
+  tab: AppTab;
+  /** Grouping strategy for the Installed tab. */
+  groupBy: GroupBy;
+  /** Free-text filter applied to package ids in Installed/Updates lists. */
+  filterQuery: string;
+  /** Most recent toast (auto-dismissed by the App). */
+  toast?: Toast;
 }
 
 export const initialState: AppState = {
@@ -56,6 +77,9 @@ export const initialState: AppState = {
   search: { query: '', results: [], visible: false },
   sources: [],
   readmes: {},
+  tab: 'installed',
+  groupBy: 'package',
+  filterQuery: '',
 };
 
 export function readmeKey(packageId: string, version: string): string {
@@ -69,7 +93,12 @@ export type Action =
   | { type: 'toggleSearch' }
   | { type: 'setSearchQuery'; query: string }
   | { type: 'clearSearch' }
-  | { type: 'readmeRequested'; packageId: string; version: string };
+  | { type: 'readmeRequested'; packageId: string; version: string }
+  | { type: 'setTab'; tab: AppTab }
+  | { type: 'setGroupBy'; groupBy: GroupBy }
+  | { type: 'setFilterQuery'; query: string }
+  | { type: 'showToast'; toast: Toast }
+  | { type: 'dismissToast' };
 
 export function packageKey(projectPath: string, packageId: string): string {
   return `${projectPath}::${packageId}`;
@@ -95,6 +124,16 @@ export function reducer(state: AppState, action: Action): AppState {
           [readmeKey(action.packageId, action.version)]: { loading: true },
         },
       };
+    case 'setTab':
+      return { ...state, tab: action.tab };
+    case 'setGroupBy':
+      return { ...state, groupBy: action.groupBy };
+    case 'setFilterQuery':
+      return { ...state, filterQuery: action.query };
+    case 'showToast':
+      return { ...state, toast: action.toast };
+    case 'dismissToast':
+      return { ...state, toast: undefined };
     case 'host':
       return applyHostMessage(state, action.message);
   }
