@@ -16,7 +16,14 @@ import { StatusBanner } from './components/StatusBanner.js';
 import { SourcesPanel } from './components/SourcesPanel.js';
 import { Toast } from './components/Toast.js';
 import { ConfirmUpdateModal } from './components/ConfirmUpdateModal.js';
-import { CompassIcon, SearchIcon, ListIcon, FolderIcon, LockIcon } from './components/icons.js';
+import {
+  CompassIcon,
+  SearchIcon,
+  ListIcon,
+  FolderIcon,
+  LockIcon,
+  GearIcon,
+} from './components/icons.js';
 
 let nextToastId = 1;
 
@@ -170,6 +177,15 @@ export function App(): JSX.Element {
             onClick={(e) => handleRefresh(e.shiftKey)}
           >
             ↻
+          </button>
+          <button
+            type="button"
+            className="icon-button"
+            title="Open NuGet Compass settings"
+            aria-label="Open settings"
+            onClick={() => vscode.postMessage({ type: 'view:openSettings' })}
+          >
+            <GearIcon size={13} />
           </button>
         </div>
       </header>

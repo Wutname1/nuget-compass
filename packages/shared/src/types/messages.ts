@@ -184,6 +184,10 @@ export interface ViewFetchReadmeMessage {
   readmeUrl: string;
 }
 
+export interface ViewOpenSettingsMessage {
+  type: 'view:openSettings';
+}
+
 export type ViewMessage =
   | ViewReadyMessage
   | ViewRefreshMessage
@@ -197,4 +201,5 @@ export type ViewMessage =
   | ViewAddSourceMessage
   | ViewRemoveSourceMessage
   | ViewToggleSourceMessage
-  | ViewFetchReadmeMessage;
+  | ViewFetchReadmeMessage
+  | ViewOpenSettingsMessage;
