@@ -284,8 +284,7 @@ function ProjectsTab({
     onUpdateConfirm({ packageId: pkg.id, toVersion: target, projectPaths });
   }
 
-  const vulnInfo = pkg.installs.find((i) => i.vulnerability && i.vulnerability.length > 0)
-    ?.vulnerability;
+  const vulnInfo = collectUniqueVulns(pkg.installs);
   const deprInfo = pkg.installs.find((i) => i.deprecation)?.deprecation;
 
   return (
@@ -300,7 +299,7 @@ function ProjectsTab({
           </span>
         </div>
       ) : null}
-      {vulnInfo ? <VulnerabilityNote vuln={vulnInfo} /> : null}
+      {vulnInfo.length > 0 ? <VulnerabilityNote vuln={vulnInfo} /> : null}
       {deprInfo ? (
         <div className="note-bar note-bar-deprecated">
           <span aria-hidden="true">🪦</span>
@@ -456,6 +455,17 @@ function VulnerabilityNote({ vuln }: { vuln: VulnerabilityInfo[] }): JSX.Element
       </span>
     </div>
   );
+}
+
+function collectUniqueVulns(installs: PackageInstall[]): VulnerabilityInfo[] {
+  const seen = new Map<string, VulnerabilityInfo>();
+  for (const i of installs) {
+    if (!i.vulnerability) continue;
+    for (const v of i.vulnerability) {
+      if (!seen.has(v.advisoryUrl)) seen.set(v.advisoryUrl, v);
+    }
+  }
+  return [...seen.values()];
 }
 
 function highestSeverity(vulns: VulnerabilityInfo[]): VulnerabilityInfo['severity'] {

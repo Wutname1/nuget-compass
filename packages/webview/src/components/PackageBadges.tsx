@@ -111,12 +111,29 @@ function severityExplanation(sev: VulnerabilityInfo['severity']): string {
 }
 
 function collectVulnTitle(installs: PackageInstall[]): string {
-  const lines: string[] = [];
+  const byUrl = new Map<string, { severity: VulnerabilityInfo['severity']; projects: Set<string> }>();
   for (const i of installs) {
     if (!i.vulnerability) continue;
     for (const v of i.vulnerability) {
-      lines.push(`${i.projectName}: ${v.severity} — ${v.advisoryUrl}`);
+      const entry = byUrl.get(v.advisoryUrl);
+      if (entry) {
+        entry.projects.add(i.projectName);
+      } else {
+        byUrl.set(v.advisoryUrl, {
+          severity: v.severity,
+          projects: new Set([i.projectName]),
+        });
+      }
     }
+  }
+  const lines: string[] = [];
+  for (const [url, info] of byUrl) {
+    const projects = [...info.projects];
+    const projectsLabel =
+      projects.length === 1
+        ? projects[0]
+        : `${projects.length} projects (${projects.join(', ')})`;
+    lines.push(`${info.severity} — ${url} (${projectsLabel})`);
   }
   return lines.join('\n');
 }
