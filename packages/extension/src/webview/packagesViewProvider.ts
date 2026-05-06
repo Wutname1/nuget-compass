@@ -1,18 +1,32 @@
 import * as vscode from 'vscode';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { HostMessage, PackageRow, ViewMessage, FilterState } from '@nuget-compass/shared';
+import type {
+  HostMessage,
+  PackageRow,
+  Project,
+  ViewMessage,
+  FilterState,
+} from '@nuget-compass/shared';
 import { defaultFilterState } from '@nuget-compass/shared';
 import { logger } from '../logging/logger.js';
 import { scanWorkspace } from '../dotnet/scan.js';
 import { DotnetNotFoundError } from '../dotnet/exec.js';
+import { runOutdatedScan, type OutdatedRow } from '../dotnet/outdated.js';
+import { createCatalogClient, type NuGetCatalogClient } from '../nuget/catalogClient.js';
+import { resolveAvailableVersions } from '../nuget/versionResolver.js';
 
 export class PackagesViewProvider implements vscode.WebviewViewProvider {
   static readonly viewType = 'nuget-compass.packages';
 
   private view: vscode.WebviewView | undefined;
+  private readonly catalog: NuGetCatalogClient;
+  /** Last scan result, kept so expand handlers can find the project for a path. */
+  private lastProjects: Project[] = [];
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(private readonly context: vscode.ExtensionContext) {
+    this.catalog = createCatalogClient(context);
+  }
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.view = webviewView;
@@ -35,17 +49,17 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
 
   private async runRefresh(): Promise<void> {
     this.post({ type: 'host:status', status: 'scanning' });
-    const showTransitive = this.loadFilters().showTransitive;
+    const filters = this.loadFilters();
     try {
-      const result = await scanWorkspace({ includeTransitive: showTransitive });
+      const result = await scanWorkspace({ includeTransitive: filters.showTransitive });
+      this.lastProjects = result.projects;
       this.post({ type: 'host:projects', projects: result.projects });
 
-      // For each project, push the installed packages as PackageRows so the
-      // panel renders something immediately. Available-versions and badges
-      // arrive in later milestones.
+      // First paint: send rows without newestAllowed so the UI shows packages
+      // immediately. Run the outdated check in the background and update.
       for (const project of result.projects) {
         const rows: PackageRow[] = project.packages
-          .filter((p) => showTransitive || !p.isTransitive)
+          .filter((p) => filters.showTransitive || !p.isTransitive)
           .map((pkg) => ({ projectPath: project.path, package: pkg }));
         this.post({ type: 'host:packageRows', projectPath: project.path, rows });
       }
@@ -58,6 +72,14 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
           detail,
         });
       }
+
+      // Second paint: enrich with newestAllowed via the SDK's outdated check.
+      // This is target-framework BLIND - the dropdown's TFM filter only takes
+      // effect when the user expands a row and we hit the catalog API.
+      this.post({ type: 'host:status', status: 'fetching' });
+      await Promise.all(
+        result.projects.map((project) => this.enrichOutdated(project, filters)),
+      );
     } catch (err) {
       if (err instanceof DotnetNotFoundError) {
         this.post({ type: 'host:error', message: err.message });
@@ -66,6 +88,78 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         logger.error('refresh failed', err);
         this.post({ type: 'host:error', message: 'Scan failed.', detail: message });
       }
+    } finally {
+      this.post({ type: 'host:status', status: 'idle' });
+    }
+  }
+
+  private async enrichOutdated(project: Project, filters: FilterState): Promise<void> {
+    let outdated: OutdatedRow[] = [];
+    try {
+      outdated = await runOutdatedScan(project.path, path.dirname(project.path), {
+        updateLevel: filters.updateLevel,
+        includePrerelease: filters.includePrerelease,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.warn(`outdated scan failed for ${project.path}: ${message}`);
+      return;
+    }
+
+    const latestById = new Map<string, string>();
+    for (const row of outdated) {
+      if (row.latestVersion) latestById.set(row.packageId, row.latestVersion);
+    }
+
+    const rows: PackageRow[] = project.packages
+      .filter((p) => filters.showTransitive || !p.isTransitive)
+      .map((pkg) => ({
+        projectPath: project.path,
+        package: pkg,
+        newestAllowed: latestById.get(pkg.id),
+      }));
+
+    this.post({ type: 'host:packageRows', projectPath: project.path, rows });
+  }
+
+  private async expandPackage(projectPath: string, packageId: string): Promise<void> {
+    const project = this.lastProjects.find((p) => p.path === projectPath);
+    if (!project) {
+      logger.warn(`expandPackage: unknown project ${projectPath}`);
+      return;
+    }
+    const pkg = project.packages.find((x) => x.id === packageId);
+    if (!pkg) {
+      logger.warn(`expandPackage: ${packageId} not found in ${projectPath}`);
+      return;
+    }
+
+    this.post({ type: 'host:status', status: 'fetching' });
+    try {
+      const filters = this.loadFilters();
+      const result = await resolveAvailableVersions({
+        packageId,
+        currentVersion: pkg.resolvedVersion,
+        projectTargetFrameworks: project.targetFrameworks,
+        cwd: path.dirname(project.path),
+        filters,
+        catalog: this.catalog,
+      });
+      this.post({
+        type: 'host:packageVersions',
+        projectPath,
+        packageId,
+        versions: result.versions,
+        newestAllowed: result.newestAllowed,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.warn(`expandPackage failed for ${packageId}: ${message}`);
+      this.post({
+        type: 'host:error',
+        message: `Could not load versions for ${packageId}.`,
+        detail: message,
+      });
     } finally {
       this.post({ type: 'host:status', status: 'idle' });
     }
@@ -85,7 +179,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         void this.saveFilters(msg.filters);
         return;
       case 'view:expandPackage':
-        // TODO: fetch available versions for this package
+        void this.expandPackage(msg.projectPath, msg.packageId);
         return;
       case 'view:updatePackage':
         // TODO: run `dotnet add package <id> --version <v>`

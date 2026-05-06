@@ -45,7 +45,15 @@ export function App(): JSX.Element {
         }}
       />
       <StatusBanner status={state.status} error={state.error} />
-      <ProjectList projects={state.projects} rowsByProject={state.rowsByProject} />
+      <ProjectList
+        projects={state.projects}
+        rowsByProject={state.rowsByProject}
+        versionsByPackage={state.versionsByPackage}
+        expanded={state.expanded}
+        onToggleExpanded={(projectPath, packageId) =>
+          dispatch({ type: 'toggleExpanded', projectPath, packageId })
+        }
+      />
     </div>
   );
 }

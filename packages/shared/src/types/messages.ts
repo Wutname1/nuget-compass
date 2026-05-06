@@ -40,10 +40,20 @@ export interface HostStatusMessage {
   status: 'idle' | 'scanning' | 'fetching';
 }
 
+export interface HostPackageVersionsMessage {
+  type: 'host:packageVersions';
+  projectPath: string;
+  packageId: string;
+  versions: import('./package.js').AvailableVersion[];
+  /** Newest version that passes current filters at the moment of resolution. */
+  newestAllowed?: string;
+}
+
 export type HostMessage =
   | HostInitMessage
   | HostProjectsMessage
   | HostPackageRowsMessage
+  | HostPackageVersionsMessage
   | HostErrorMessage
   | HostStatusMessage;
 
