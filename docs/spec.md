@@ -48,32 +48,18 @@ Hybrid — `.NET SDK` for project state and mutations, NuGet v3 catalog API for 
                 └──────────────────────┘
 ```
 
-## v0.1.0 — MVP scope
+## v0.1.0 scope
 
-### In scope
+Everything in [`features.md`](features.md) ships as v0.1.0. Milestones M1 through M11 sequence the build; there are no separate v0.2/v0.3/v0.4 releases. See `features.md` for the full milestone breakdown and current status.
 
-1. **Project discovery.** Enumerate `*.csproj`, `*.fsproj`, `*.vbproj` in workspace via VS Code workspace API. Group results per project. Read TFM via `dotnet package list --format json`.
-2. **Installed package listing.** Show every `<PackageReference>` with current version, resolved version, and the project's TFM. Differentiate top-level vs. transitive (transitive hidden by default).
-3. **Available versions per package.** Backed by `dotnet package search --exact-match` for enumeration + NuGet catalog API for per-version TFM.
-4. **TFM compatibility filter (binary).** Default: hide incompatible versions. Toggle: show all, with incompatible versions clearly badged.
-5. **Update-level dropdown (orthogonal axis).** Patch / Minor (default) / Major / Include prerelease.
-6. **Vulnerability + deprecation badges.** From `dotnet package list --vulnerable` and `--deprecated`.
-7. **Single-package update.** Click a version → run `dotnet add package <id> --version <v>`.
-8. **Manual refresh.** Re-runs all queries. No background polling in v0.1.
+The ever-non-goals are listed at the bottom of `features.md` and mirrored here:
 
-### Out of scope for v0.1
-
-- "Update All" button (needs careful TFM batching and conflict resolution — v0.2)
-- Package search / install-new (v0.2)
-- Package uninstall (v0.2)
-- Solution-wide operations across multiple projects (v0.2)
-- `Directory.Packages.props` / Central Package Management UI (v0.3)
-- Private feed credential UI (defer to user's `nuget.config`; SDK handles it)
-- Transitive dependency upgrade UI (rare, complex; v0.3+)
-- License compliance checks (v0.4+)
-- Background watch on `.csproj` changes (v0.2)
-- Lock file (`packages.lock.json`) handling (v0.3)
-- `packages.config` (legacy non-SDK projects) — explicit non-goal
+- **`packages.config` projects** (legacy non-SDK style) — out of scope; users on that workflow are not the audience
+- **Visual Studio integration** — this is a VS Code extension; VS already has its own (broken) UI
+- **NuGet protocol reimplementation** — we use the SDK and the public v3 API
+- **Lock-step with .NET preview SDKs** — support N and N-1 LTS; previews are best-effort
+- **Telemetry collection** — not in the product roadmap
+- **Private feed credential UI** — deferred to the user's `nuget.config`; the SDK handles auth transparently
 
 ## Stack
 
@@ -111,7 +97,7 @@ nuget-compass/
 └── .gitignore
 ```
 
-## Performance targets (v0.1)
+## Performance targets
 
 - Cold open of a 10-project, 100-package workspace: first paint < 2s
 - Per-package version-list expand: < 500ms with warm cache, < 3s cold
@@ -123,8 +109,8 @@ nuget-compass/
 
 Three tiers:
 
-1. **In-memory** (per VS Code session): all SDK output, all catalog entries, resolved TFM compatibility decisions.
-2. **Disk cache** (`globalStorageUri`): catalog entries keyed by `{id}@{version}`. Immutable — written once, never invalidated. Indexed JSON files in subdirectories (sharded by first letter of package ID to avoid huge directories).
+1. **In-memory** (per VS Code session): the full version list per package, including target framework data. Keyed by lowercased package id.
+2. **Disk cache** (`globalStorageUri`, shared across all workspaces and projects): NuGet v3 registration pages, sharded by first character of package id. Pages are immutable except for the page containing the highest version, which is re-validated against the registration index's `commitTimeStamp` on each refresh.
 3. **No cache for installed-state queries.** Always re-query the SDK. They're fast (sub-second) and stale data here causes user confusion.
 
 ## Failure modes
@@ -141,22 +127,21 @@ Three tiers:
 
 ## Non-functional requirements
 
-- **No telemetry in v0.1.** If added later, opt-in only with clear disclosure.
+- **No telemetry.** If considered later, opt-in only with clear disclosure.
 - **No external dependencies beyond .NET SDK and nuget.org.** No third-party APIs, analytics, license servers.
 - **Offline-tolerant.** Installed-state view works without network; available-versions view shows cached data.
 - **Cross-platform.** No Windows-specific paths, no shell-specific commands.
 
 ## Versioning strategy
 
-- v0.1.x — MVP iterations; breaking changes allowed in settings/state shape
-- v0.2.x — Update All + search + uninstall; settings stable
-- v1.0.0 — Feature complete for "modern .NET project, single or solution-level"; SemVer enforced thereafter
+- 0.x.y — pre-public versions used during M1–M10 build-out; breaking changes allowed in settings shape
+- 1.0.0 — first marketplace release after M11; SemVer enforced thereafter
 
-## Success criteria for v0.1
+## Success criteria for v0.1.0 release
 
-- Open the included fixture project (net8.0, 13 packages) → see all 13 with current versions and project TFM in < 2s
-- Default filter (TFM-compat + Minor) hides EF Core 10.0.7 and shows EF Core 8.0.x; shows `Microsoft.Extensions.Configuration` 8.0.x but not 10.x (because Major filter would be needed)
-- Switching update-level to Major reveals `Microsoft.Extensions.Configuration` 10.0.7 with a "TFM compatible" badge, while EF Core 10.0.7 stays visible only when "show all" is on, with an "incompatible" badge
+- Open the included fixture project (net8.0, 13 packages) → see all 13 with current versions and project target framework in < 2 seconds
+- Default filter (Compatible + Minor) shows EF Core 8.0.x updates and hides incompatible 10.x; shows `Microsoft.Extensions.Configuration` 8.0.x updates
+- Switching update-level to Major reveals `Microsoft.Extensions.Configuration` 10.0.7 (multi-target — compatible with net8.0); EF Core 10.0.7 stays hidden unless "Show all" is also on, where it appears with an "incompatible" badge
 - Cross-platform CI green on Windows, macOS, Linux
-- VSIX size < 5MB
-- Installed package count of 0 on the extension's own dependencies (after bundling) — i.e., no runtime `node_modules` ships
+- VSIX size < 5 MB
+- Zero runtime `node_modules` shipped — all dependencies bundled by esbuild/Vite

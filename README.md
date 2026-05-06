@@ -27,7 +27,7 @@ nuget-compass/
 
 - [`docs/spec.md`](docs/spec.md) — Specification and architecture
 - [`docs/research.md`](docs/research.md) — Empirical research backing the design (.NET SDK capabilities, NuGet API, fork analysis)
-- [`docs/features.md`](docs/features.md) — v0.1 feature set and roadmap
+- [`docs/features.md`](docs/features.md) — feature set, milestone breakdown, current status
 - [`docs/ui-design.md`](docs/ui-design.md) — UI layout, controls, interaction model
 
 ## License
