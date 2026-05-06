@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: #1e1e1e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; color: #cccccc; padding: 16px; box-sizing: border-box; }
+  .section-title { font-size: 10px; font-weight: 600; color: #858585; letter-spacing: 0.08em; text-transform: uppercase; margin: 14px 0 8px; }
+  .section-title:first-child { margin-top: 0; }
+  .row { display: flex; align-items: baseline; gap: 12px; padding: 6px 0; border-bottom: 1px solid #2d2d2d; }
+  .meta { width: 160px; flex-shrink: 0; }
+  .meta-name { font-size: 10px; color: #b180d7; font-family: "SF Mono", Consolas, monospace; }
+  .meta-size { font-size: 10px; color: #525252; font-family: "SF Mono", Consolas, monospace; margin-top: 1px; }
+  .sample { flex: 1; }
+  .panel-title { font-size: 0.95rem; font-weight: 600; letter-spacing: 0.02em; }
+  .label-text { font-size: 0.85rem; color: #cccccc; }
+  .label-muted { font-size: 0.85rem; color: #858585; }
+  .version-text { font-size: 0.85rem; color: #858585; font-variant-numeric: tabular-nums; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+  .update-text { font-size: 0.85rem; color: #3794ff; font-variant-numeric: tabular-nums; }
+  .code-text { font-family: "SF Mono", "Cascadia Code", "Fira Code", Consolas, "Courier New", monospace; font-size: 0.9em; padding: 0 0.2em; background: rgba(128,128,128,0.15); border-radius: 2px; }
+  .banner-text { font-size: 0.85rem; }
+</style>
+</head>
+<body class="nc-root">
+  <div class="section-title">UI Type Scale</div>
+
+  <div class="row">
+    <div class="meta"><div class="meta-name">--nc-text-header</div><div class="meta-size">0.95rem · 600 · ls 0.02em</div></div>
+    <div class="sample"><span class="panel-title">NuGet Compass</span></div>
+  </div>
+  <div class="row">
+    <div class="meta"><div class="meta-name">--nc-text-base</div><div class="meta-size">13px (var) · 400</div></div>
+    <div class="sample"><span>TestApp · Default body text</span></div>
+  </div>
+  <div class="row">
+    <div class="meta"><div class="meta-name">--nc-text-sm (label)</div><div class="meta-size">0.85rem · 400</div></div>
+    <div class="sample"><span class="label-text">Microsoft.EntityFrameworkCore</span></div>
+  </div>
+  <div class="row">
+    <div class="meta"><div class="meta-name">--nc-text-sm (muted)</div><div class="meta-size">0.85rem · 400 · muted</div></div>
+    <div class="sample"><span class="label-muted">(net8.0)</span></div>
+  </div>
+  <div class="row">
+    <div class="meta"><div class="meta-name">version / tabular</div><div class="meta-size">0.85rem · tabular-nums</div></div>
+    <div class="sample"><span class="version-text">8.0.0</span>&nbsp;&nbsp;<span class="update-text">→ 8.0.26</span></div>
+  </div>
+  <div class="row">
+    <div class="meta"><div class="meta-name">--nc-font-mono (code)</div><div class="meta-size">0.9em of context · mono</div></div>
+    <div class="sample"><code class="code-text">.csproj</code>&nbsp;&nbsp;<code class="code-text">.fsproj</code>&nbsp;&nbsp;<code class="code-text">NU1202</code></div>
+  </div>
+  <div class="row">
+    <div class="meta"><div class="meta-name">--nc-text-xs (banner detail)</div><div class="meta-size">0.8rem · mono</div></div>
+    <div class="sample"><span style="font-family: 'SF Mono', Consolas, monospace; font-size: 0.8rem; color: #f48771;">error NU1202: Package not compatible with net8.0</span></div>
+  </div>
+</body>
+</html>

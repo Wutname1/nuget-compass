@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: #1e1e1e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-size: 12px; color: #cccccc; padding: 16px; box-sizing: border-box; }
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .swatch { border-radius: 4px; overflow: hidden; }
+  .swatch-color { height: 44px; width: 100%; }
+  .swatch-label { padding: 4px 0 0; font-size: 10px; color: #858585; }
+  .swatch-value { font-size: 10px; color: #525252; font-family: "SF Mono", Consolas, monospace; }
+  .section-title { font-size: 10px; font-weight: 600; color: #858585; letter-spacing: 0.08em; text-transform: uppercase; margin: 16px 0 8px; }
+  .section-title:first-child { margin-top: 0; }
+  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .row-swatch { width: 32px; height: 20px; border-radius: 2px; flex-shrink: 0; }
+  .row-info { display: flex; flex-direction: column; gap: 1px; }
+  .row-name { font-size: 11px; color: #cccccc; }
+  .row-val  { font-size: 10px; color: #525252; font-family: "SF Mono", Consolas, monospace; }
+</style>
+</head>
+<body class="nc-root">
+  <div class="section-title">Backgrounds</div>
+  <div class="grid">
+    <div class="swatch"><div class="swatch-color" style="background:#1e1e1e; outline:1px solid #3c3c3c;"></div><div class="swatch-label">App BG</div><div class="swatch-value">#1e1e1e</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#252526;"></div><div class="swatch-label">Sidebar</div><div class="swatch-value">#252526</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#2d2d2d;"></div><div class="swatch-label">Hdr BG</div><div class="swatch-value">#2d2d2d</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#3c3c3c;"></div><div class="swatch-label">Input BG</div><div class="swatch-value">#3c3c3c</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:rgba(128,128,128,0.15);"></div><div class="swatch-label">Code BG</div><div class="swatch-value">rgba(128,128,128,.15)</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:rgba(255,255,255,0.06);"></div><div class="swatch-label">Row Hover</div><div class="swatch-value">rgba(255,255,255,.06)</div></div>
+  </div>
+
+  <div class="section-title">Foregrounds</div>
+  <div class="grid">
+    <div class="swatch"><div class="swatch-color" style="background:#cccccc;"></div><div class="swatch-label">Primary</div><div class="swatch-value">#cccccc</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#858585;"></div><div class="swatch-label">Muted</div><div class="swatch-value">#858585</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#3794ff;"></div><div class="swatch-label">Link</div><div class="swatch-value">#3794ff</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#75beff;"></div><div class="swatch-label">Info FG</div><div class="swatch-value">#75beff</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#f48771;"></div><div class="swatch-label">Error FG</div><div class="swatch-value">#f48771</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#3c3c3c; outline:1px solid #3c3c3c;"></div><div class="swatch-label">Border</div><div class="swatch-value">#3c3c3c</div></div>
+  </div>
+
+  <div class="section-title">Brand &amp; Charts</div>
+  <div class="grid">
+    <div class="swatch"><div class="swatch-color" style="background:#b180d7;"></div><div class="swatch-label">Purple</div><div class="swatch-value">#b180d7</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#89d185;"></div><div class="swatch-label">Green</div><div class="swatch-value">#89d185</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#cca700;"></div><div class="swatch-label">Yellow</div><div class="swatch-value">#cca700</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#d18616;"></div><div class="swatch-label">Orange</div><div class="swatch-value">#d18616</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#f14c4c;"></div><div class="swatch-label">Red</div><div class="swatch-value">#f14c4c</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#be1100;"></div><div class="swatch-label">Error Bdr</div><div class="swatch-value">#be1100</div></div>
+  </div>
+</body>
+</html>

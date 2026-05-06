@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: #1e1e1e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-size: 12px; color: #cccccc; padding: 20px; box-sizing: border-box; }
+  .section-title { font-size: 10px; font-weight: 600; color: #858585; letter-spacing: 0.08em; text-transform: uppercase; margin: 14px 0 8px; }
+  .section-title:first-child { margin-top: 0; }
+  .row { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+  .icon-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .icon-cell .label { font-size: 10px; color: #858585; }
+  .icon-cell .size  { font-size: 10px; color: #525252; font-family: "SF Mono", Consolas, monospace; }
+  .on-dark   { background: #1e1e1e; padding: 10px; border: 1px solid #3c3c3c; border-radius: 2px; }
+  .on-purple { background: #2d2040; padding: 10px; border-radius: 2px; }
+  .on-light  { background: #f0f0f0; padding: 10px; border-radius: 2px; }
+
+  /* activity bar simulation */
+  .activity-bar {
+    width: 48px; background: #333333; display: flex; flex-direction: column;
+    align-items: center; padding: 8px 0; gap: 4px; border-radius: 2px;
+  }
+  .ab-icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; }
+  .ab-icon:hover { background: rgba(255,255,255,0.1); }
+  .ab-icon.active { background: rgba(177,128,215,0.15); border-left: 2px solid #b180d7; padding-left: 0; margin-left: -2px; }
+  .ab-sep { width: 24px; height: 1px; background: #3c3c3c; margin: 2px 0; }
+
+  /* unicode badge icons */
+  .unicode-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .u-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; background: #252526; border-radius: 2px; }
+  .u-sym { font-size: 18px; line-height: 1; }
+  .u-label { font-size: 10px; color: #858585; text-align: center; }
+</style>
+</head>
+<body class="nc-root">
+  <div class="section-title">Brand Icon — Compass SVG</div>
+  <div class="row">
+    <div class="icon-cell">
+      <div class="on-dark"><img src="../assets/compass.svg" width="24" height="24" style="filter: brightness(0.8) invert(1);"></div>
+      <div class="label">16px dark</div>
+    </div>
+    <div class="icon-cell">
+      <div class="on-dark"><img src="../assets/compass.svg" width="32" height="32" style="filter: brightness(0.8) invert(1);"></div>
+      <div class="label">32px dark</div>
+    </div>
+    <div class="icon-cell">
+      <div class="on-purple"><img src="../assets/compass.svg" width="32" height="32" style="filter: brightness(3) sepia(1) hue-rotate(220deg) saturate(3);"></div>
+      <div class="label">on purple</div>
+    </div>
+    <div class="icon-cell">
+      <div class="on-light"><img src="../assets/compass.svg" width="32" height="32" style="filter: brightness(0);"></div>
+      <div class="label">light theme</div>
+    </div>
+
+    <!-- Activity bar simulation -->
+    <div class="icon-cell">
+      <div class="activity-bar">
+        <div class="ab-icon active">
+          <img src="../assets/compass.svg" width="22" height="22" style="filter: brightness(0) saturate(100%) invert(70%) sepia(30%) saturate(600%) hue-rotate(220deg);">
+        </div>
+        <div class="ab-sep"></div>
+        <div class="ab-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#858585" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        </div>
+        <div class="ab-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#858585" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+      </div>
+      <div class="label">Activity bar</div>
+    </div>
+  </div>
+
+  <div class="section-title">Unicode Badge Glyphs</div>
+  <div class="unicode-grid">
+    <div class="u-cell"><span class="u-sym">↻</span><span class="u-label">Refresh</span></div>
+    <div class="u-cell"><span class="u-sym" style="color:#3794ff;">→</span><span class="u-label">Update arrow</span></div>
+    <div class="u-cell"><span class="u-sym" style="color:#89d185;">✓</span><span class="u-label">Compatible</span></div>
+    <div class="u-cell"><span class="u-sym" style="color:#cca700;">⚠</span><span class="u-label">Vulnerability</span></div>
+    <div class="u-cell"><span class="u-sym" style="color:#f14c4c;">✗</span><span class="u-label">Incompatible</span></div>
+    <div class="u-cell"><span class="u-sym">🪦</span><span class="u-label">Deprecated</span></div>
+    <div class="u-cell"><span class="u-sym" style="color:#3794ff;">🔒</span><span class="u-label">Prerelease</span></div>
+    <div class="u-cell"><span class="u-sym" style="color:#3794ff;">↑</span><span class="u-label">Count</span></div>
+    <div class="u-cell"><span class="u-sym" style="color:#75beff;">ⓘ</span><span class="u-label">Info</span></div>
+    <div class="u-cell"><span class="u-sym">⚙</span><span class="u-label">Settings</span></div>
+  </div>
+</body>
+</html>

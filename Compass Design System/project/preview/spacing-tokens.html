@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: #1e1e1e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-size: 12px; color: #cccccc; padding: 16px; box-sizing: border-box; }
+  .section-title { font-size: 10px; font-weight: 600; color: #858585; letter-spacing: 0.08em; text-transform: uppercase; margin: 14px 0 8px; }
+  .section-title:first-child { margin-top: 0; }
+  .grid { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+  .token-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid #2a2a2a; }
+  .token-name { font-family: "SF Mono", Consolas, monospace; font-size: 10px; color: #b180d7; width: 120px; flex-shrink: 0; }
+  .token-val { font-family: "SF Mono", Consolas, monospace; font-size: 10px; color: #525252; width: 60px; flex-shrink: 0; }
+  .token-usage { font-size: 10px; color: #858585; }
+  .bar-wrap { width: 80px; }
+  .bar { height: 12px; background: #3794ff; border-radius: 2px; }
+  .radius-row { display: flex; gap: 16px; align-items: center; margin-top: 4px; }
+  .radius-box { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .radius-vis { width: 32px; height: 32px; background: #3794ff; }
+  .radius-label { font-size: 10px; color: #858585; font-family: "SF Mono", Consolas, monospace; }
+</style>
+</head>
+<body class="nc-root">
+  <div class="section-title">Spacing Scale</div>
+  <div class="token-row"><div class="token-name">--nc-space-1</div><div class="token-val">0.15rem</div><div class="bar-wrap"><div class="bar" style="width:3px;"></div></div><div class="token-usage">Icon button inner pad</div></div>
+  <div class="token-row"><div class="token-name">--nc-space-2</div><div class="token-val">0.25rem</div><div class="bar-wrap"><div class="bar" style="width:5px;"></div></div><div class="token-usage">Icon button gap</div></div>
+  <div class="token-row"><div class="token-name">--nc-space-3</div><div class="token-val">0.35rem</div><div class="bar-wrap"><div class="bar" style="width:7px;"></div></div><div class="token-usage">Filter label gap, row vertical pad</div></div>
+  <div class="token-row"><div class="token-name">--nc-space-4</div><div class="token-val">0.4rem</div><div class="bar-wrap"><div class="bar" style="width:9px;"></div></div><div class="token-usage">Icon button horizontal pad</div></div>
+  <div class="token-row"><div class="token-name">--nc-space-5</div><div class="token-val">0.5rem</div><div class="bar-wrap"><div class="bar" style="width:11px;"></div></div><div class="token-usage">Header/filter vertical pad</div></div>
+  <div class="token-row"><div class="token-name">--nc-space-6</div><div class="token-val">0.75rem</div><div class="bar-wrap"><div class="bar" style="width:17px;"></div></div><div class="token-usage">Standard horiz pad, filter bar gap</div></div>
+  <div class="token-row"><div class="token-name">--nc-space-8</div><div class="token-val">1rem</div><div class="bar-wrap"><div class="bar" style="width:22px;"></div></div><div class="token-usage">Empty state horizontal pad</div></div>
+  <div class="token-row"><div class="token-name">--nc-space-12</div><div class="token-val">2rem</div><div class="bar-wrap"><div class="bar" style="width:44px;"></div></div><div class="token-usage">Empty state vertical pad</div></div>
+
+  <div class="section-title">Border Radii</div>
+  <div class="radius-row">
+    <div class="radius-box"><div class="radius-vis" style="border-radius:0;"></div><div class="radius-label">--nc-radius-none</div><div class="radius-label" style="color:#525252;">0</div><div class="radius-label" style="color:#858585;">rows, panels</div></div>
+    <div class="radius-box"><div class="radius-vis" style="border-radius:2px;"></div><div class="radius-label">--nc-radius-sm</div><div class="radius-label" style="color:#525252;">2px</div><div class="radius-label" style="color:#858585;">inline code</div></div>
+    <div class="radius-box"><div class="radius-vis" style="border-radius:3px;"></div><div class="radius-label">--nc-radius-md</div><div class="radius-label" style="color:#525252;">3px</div><div class="radius-label" style="color:#858585;">icon buttons</div></div>
+  </div>
+</body>
+</html>

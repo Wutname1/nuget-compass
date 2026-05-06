@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: #1e1e1e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-size: 12px; color: #cccccc; padding: 16px; box-sizing: border-box; }
+  .section-title { font-size: 10px; font-weight: 600; color: #858585; letter-spacing: 0.08em; text-transform: uppercase; margin: 14px 0 8px; }
+  .section-title:first-child { margin-top: 0; }
+  .badge-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 7px; border-radius: 10px;
+    font-size: 11px; font-weight: 500; line-height: 1.5;
+    border: 1px solid transparent;
+  }
+  .badge-update    { color: #3794ff; background: rgba(55, 148, 255, 0.12); border-color: rgba(55, 148, 255, 0.25); }
+  .badge-compat    { color: #89d185; background: rgba(137, 209, 133, 0.1); border-color: rgba(137, 209, 133, 0.25); }
+  .badge-prerelease{ color: #3794ff; background: rgba(55, 148, 255, 0.08); border-color: rgba(55, 148, 255, 0.2); }
+  .badge-deprecated{ color: #858585; background: rgba(128, 128, 128, 0.1); border-color: rgba(128, 128, 128, 0.2); }
+  .badge-incompat  { color: #f14c4c; background: rgba(241, 76, 76, 0.1);  border-color: rgba(241, 76, 76, 0.25); }
+  .badge-vuln-low  { color: #cca700; background: rgba(204, 167, 0, 0.1);  border-color: rgba(204, 167, 0, 0.25); }
+  .badge-vuln-mod  { color: #d18616; background: rgba(209, 134, 22, 0.1); border-color: rgba(209, 134, 22, 0.25); }
+  .badge-vuln-high { color: #f14c4c; background: rgba(241, 76, 76, 0.1);  border-color: rgba(241, 76, 76, 0.25); }
+  .badge-vuln-crit { color: #ff4444; background: rgba(255, 68, 68, 0.15); border-color: rgba(255, 68, 68, 0.4); font-weight: 700; }
+  .package-row {
+    display: grid; grid-template-columns: 1fr auto auto;
+    gap: 12px; align-items: center;
+    padding: 6px 10px; font-size: 0.85rem;
+    background: #252526; border-bottom: 1px solid #3c3c3c;
+  }
+  .package-row:hover { background: rgba(255,255,255,0.06); }
+  .pname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pver { color: #858585; font-variant-numeric: tabular-nums; }
+  .pnew { color: #3794ff; font-variant-numeric: tabular-nums; }
+  .badges-col { display: flex; gap: 5px; align-items: center; }
+</style>
+</head>
+<body class="nc-root">
+  <div class="section-title">Status Badges — All Types</div>
+  <div class="badge-row">
+    <span class="badge badge-update">↑ 3 updates</span>
+    <span class="badge badge-compat">✓ compatible</span>
+    <span class="badge badge-prerelease">🔒 prerelease</span>
+    <span class="badge badge-deprecated">🪦 deprecated</span>
+    <span class="badge badge-incompat">✗ net10.0</span>
+  </div>
+
+  <div class="section-title">Vulnerability Severity</div>
+  <div class="badge-row">
+    <span class="badge badge-vuln-low">⚠ Low</span>
+    <span class="badge badge-vuln-mod">⚠ Moderate</span>
+    <span class="badge badge-vuln-high">⚠ High</span>
+    <span class="badge badge-vuln-crit">⚠ Critical</span>
+  </div>
+
+  <div class="section-title">Badges in Context (Package Rows)</div>
+  <div class="package-row">
+    <span class="pname">AutoMapper</span>
+    <span class="pver">12.0.1</span>
+    <span class="badges-col"><span class="badge badge-vuln-high">⚠ High</span></span>
+  </div>
+  <div class="package-row">
+    <span class="pname">Microsoft.EntityFrameworkCore</span>
+    <span class="pver">8.0.0 → <span style="color:#3794ff">8.0.26</span></span>
+    <span class="badges-col"><span class="badge badge-update">↑ 5</span></span>
+  </div>
+  <div class="package-row">
+    <span class="pname">Newtonsoft.Json</span>
+    <span class="pver">13.0.1</span>
+    <span class="badges-col"><span class="badge badge-deprecated">🪦 deprecated</span></span>
+  </div>
+  <div class="package-row" style="background: rgba(255,255,255,0.06);">
+    <span class="pname">SomePackage.PreviewOnly</span>
+    <span class="pver">4.0.0 → <span style="color:#3794ff">5.0.0-rc.1</span></span>
+    <span class="badges-col"><span class="badge badge-prerelease">🔒 prerelease</span><span class="badge badge-compat">✓ compatible</span></span>
+  </div>
+</body>
+</html>

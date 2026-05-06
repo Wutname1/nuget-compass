@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: #1e1e1e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-size: 12px; color: #cccccc; padding: 16px; box-sizing: border-box; }
+  .section-title { font-size: 10px; font-weight: 600; color: #858585; letter-spacing: 0.08em; text-transform: uppercase; margin: 14px 0 8px; }
+  .section-title:first-child { margin-top: 0; }
+
+  .pkg-list { list-style: none; margin: 0; padding: 0; border: 1px solid #3c3c3c; border-radius: 0; }
+  .project-hdr {
+    display: flex; align-items: baseline; gap: 0.5rem;
+    padding: 0.5rem 0.75rem; font-weight: 600;
+    background: #2d2d2d; border-bottom: 1px solid #3c3c3c;
+    font-size: 0.85rem;
+  }
+  .tfm { color: #858585; font-weight: 400; font-size: 0.82rem; }
+  .count { color: #3794ff; font-weight: 400; font-size: 0.82rem; margin-left: auto; }
+
+  .pkg-row {
+    display: grid; grid-template-columns: 1fr auto;
+    gap: 0.75rem; align-items: center;
+    padding: 0.35rem 0.75rem; font-size: 0.85rem;
+    border-bottom: 1px solid transparent;
+    cursor: pointer;
+  }
+  .pkg-row:hover { background: rgba(255,255,255,0.06); }
+  .pkg-row.selected { background: rgba(55,148,255,0.08); }
+  .pname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #cccccc; }
+  .pname.transitive { color: #858585; padding-left: 0.75rem; }
+  .vers-col { display: flex; gap: 8px; align-items: center; }
+  .ver { color: #858585; font-variant-numeric: tabular-nums; font-size: 0.85rem; }
+  .new { color: #3794ff; font-variant-numeric: tabular-nums; font-size: 0.85rem; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 1px 6px; border-radius: 10px;
+    font-size: 10px; font-weight: 500; border: 1px solid transparent;
+  }
+  .b-update    { color: #3794ff; background: rgba(55,148,255,0.12); border-color: rgba(55,148,255,0.25); }
+  .b-vuln-high { color: #f14c4c; background: rgba(241,76,76,0.1);   border-color: rgba(241,76,76,0.25); }
+  .b-vuln-crit { color: #ff4444; background: rgba(255,68,68,0.15);  border-color: rgba(255,68,68,0.4); font-weight:700; }
+  .b-depr      { color: #858585; background: rgba(128,128,128,0.1); border-color: rgba(128,128,128,0.2); }
+  .b-incompat  { color: #f14c4c; background: rgba(241,76,76,0.1);   border-color: rgba(241,76,76,0.25); text-decoration: line-through; }
+  .b-pre       { color: #3794ff; background: rgba(55,148,255,0.08); border-color: rgba(55,148,255,0.2); }
+  .b-compat    { color: #89d185; background: rgba(137,209,133,0.1); border-color: rgba(137,209,133,0.25); }
+
+  /* expanded version list */
+  .expanded {
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid #3c3c3c;
+    padding: 6px 12px 6px 24px;
+    font-size: 0.82rem;
+  }
+  .expanded-title { color: #858585; margin-bottom: 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .ver-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .ver-item { display: flex; gap: 10px; align-items: center; padding: 3px 6px; border-radius: 2px; cursor: pointer; color: #cccccc; }
+  .ver-item:hover { background: rgba(255,255,255,0.06); }
+  .ver-item.current { color: #858585; cursor: default; }
+  .ver-item.current:hover { background: transparent; }
+  .ver-num { font-variant-numeric: tabular-nums; width: 80px; }
+  .ver-date { color: #858585; font-size: 10px; width: 80px; }
+  .ver-compat { font-size: 10px; color: #89d185; }
+  .ver-incompat { font-size: 10px; color: #f14c4c; }
+
+  /* transitive badge */
+  .t-badge { font-size: 9px; color: #858585; background: rgba(128,128,128,0.12); border: 1px solid rgba(128,128,128,0.15); padding: 1px 5px; border-radius: 8px; margin-left: 4px; }
+</style>
+</head>
+<body class="nc-root">
+  <div class="section-title">Package Row — All States</div>
+  <ul class="pkg-list">
+    <li class="project-hdr">TestApp <span class="tfm">(net8.0)</span><span class="count">4 updates</span></li>
+    <!-- "tfm" class name kept as internal CSS handle; visible text uses framework moniker -->
+
+    <!-- up to date -->
+    <li class="pkg-row">
+      <span class="pname">Dapper</span>
+      <span class="vers-col"><span class="ver">2.1.72</span></span>
+    </li>
+
+    <!-- has update -->
+    <li class="pkg-row">
+      <span class="pname">FluentValidation</span>
+      <span class="vers-col"><span class="ver">11.8.0</span><span class="new">→ 11.12.0</span><span class="badge b-update">↑ 4</span></span>
+    </li>
+
+    <!-- vulnerability -->
+    <li class="pkg-row">
+      <span class="pname">AutoMapper</span>
+      <span class="vers-col"><span class="ver">12.0.1</span><span class="badge b-vuln-high">⚠ High</span></span>
+    </li>
+
+    <!-- selected + expanded -->
+    <li class="pkg-row selected">
+      <span class="pname">Microsoft.EntityFrameworkCore</span>
+      <span class="vers-col"><span class="ver">8.0.0</span><span class="new">→ 8.0.26</span><span class="badge b-update">↑ 5</span></span>
+    </li>
+    <li class="expanded">
+      <div class="expanded-title">Available versions</div>
+      <ul class="ver-list">
+        <li class="ver-item current"><span class="ver-num">8.0.0</span><span class="ver-date"></span><span style="font-size:10px;color:#858585;">(current)</span></li>
+        <li class="ver-item"><span class="ver-num">8.0.26</span><span class="ver-date">2025-11-12</span><span class="ver-compat">✓ net8.0</span></li>
+        <li class="ver-item"><span class="ver-num">8.0.14</span><span class="ver-date">2025-04-08</span><span class="ver-compat">✓ net8.0</span></li>
+        <li class="ver-item" style="color:#525252; text-decoration:line-through;"><span class="ver-num">10.0.7</span><span class="ver-date">2025-09-02</span><span class="ver-incompat">✗ net10.0</span></li>
+      </ul>
+    </li>
+
+    <!-- deprecated -->
+    <li class="pkg-row">
+      <span class="pname">Newtonsoft.Json</span>
+      <span class="vers-col"><span class="ver">13.0.1</span><span class="badge b-depr">🪦 deprecated</span></span>
+    </li>
+
+    <!-- transitive -->
+    <li class="pkg-row">
+      <span class="pname transitive">Microsoft.Extensions.Logging <span class="t-badge">transitive</span></span>
+      <span class="vers-col"><span class="ver" style="color:#666;">8.0.0</span></span>
+    </li>
+  </ul>
+</body>
+</html>

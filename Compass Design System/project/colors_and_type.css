@@ -1,0 +1,154 @@
+/**
+ * NuGet Compass — Design Tokens
+ *
+ * All colors are VS Code CSS variables. This file maps them to
+ * semantic design tokens for use in design system previews and UI kits.
+ *
+ * In production, the extension uses VS Code vars directly.
+ * These aliases exist so design artifacts can render correctly outside VS Code.
+ */
+
+/* ─────────────────────────────────────────────
+   DARK THEME SIMULATION (VS Code Dark+ defaults)
+   ───────────────────────────────────────────── */
+:root {
+  /* VS Code raw vars (Dark+ defaults for design preview) */
+  --vscode-foreground:                        #cccccc;
+  --vscode-editor-background:                 #1e1e1e;
+  --vscode-sideBar-background:                #252526;
+  --vscode-sideBarSectionHeader-background:   #2d2d2d;
+  --vscode-descriptionForeground:             #858585;
+  --vscode-textLink-foreground:               #3794ff;
+  --vscode-widget-border:                     #3c3c3c;
+  --vscode-dropdown-background:               #3c3c3c;
+  --vscode-dropdown-foreground:               #cccccc;
+  --vscode-dropdown-border:                   #3c3c3c;
+  --vscode-toolbar-hoverBackground:           rgba(128, 128, 128, 0.2);
+  --vscode-list-hoverBackground:              rgba(255, 255, 255, 0.06);
+  --vscode-textCodeBlock-background:          rgba(128, 128, 128, 0.15);
+  --vscode-editorInfo-background:             rgba(0, 107, 179, 0.12);
+  --vscode-editorInfo-foreground:             #75beff;
+  --vscode-inputValidation-errorBackground:   rgba(120, 27, 27, 0.3);
+  --vscode-inputValidation-errorForeground:   #f48771;
+  --vscode-inputValidation-errorBorder:       #be1100;
+  --vscode-charts-purple:                     #b180d7;
+  --vscode-charts-yellow:                     #cca700;
+  --vscode-charts-orange:                     #d18616;
+  --vscode-charts-red:                        #f14c4c;
+  --vscode-charts-green:                      #89d185;
+  --vscode-font-family:                       -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --vscode-font-size:                         13px;
+  --vscode-editor-font-family:                "SF Mono", "Cascadia Code", "Fira Code", Consolas, "Courier New", monospace;
+  --vscode-editor-font-size:                  13px;
+  --vscode-focus-border:                      #007fd4;
+  --vscode-button-background:                 #0e639c;
+  --vscode-button-foreground:                 #ffffff;
+  --vscode-button-hoverBackground:            #1177bb;
+}
+
+/* ─────────────────────────────────────────────
+   SEMANTIC COLOR TOKENS
+   ───────────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --nc-bg-app:        var(--vscode-editor-background);
+  --nc-bg-sidebar:    var(--vscode-sideBar-background);
+  --nc-bg-header:     var(--vscode-sideBarSectionHeader-background);
+  --nc-bg-code:       var(--vscode-textCodeBlock-background);
+  --nc-bg-input:      var(--vscode-dropdown-background);
+
+  /* Foregrounds */
+  --nc-fg-primary:    var(--vscode-foreground);
+  --nc-fg-muted:      var(--vscode-descriptionForeground);
+  --nc-fg-link:       var(--vscode-textLink-foreground);
+  --nc-fg-input:      var(--vscode-dropdown-foreground);
+
+  /* Borders */
+  --nc-border:        var(--vscode-widget-border);
+  --nc-border-input:  var(--vscode-dropdown-border);
+  --nc-border-error:  var(--vscode-inputValidation-errorBorder);
+
+  /* Interactive */
+  --nc-hover-row:     var(--vscode-list-hoverBackground);
+  --nc-hover-button:  var(--vscode-toolbar-hoverBackground);
+  --nc-focus:         var(--vscode-focus-border);
+
+  /* Status */
+  --nc-info-bg:       var(--vscode-editorInfo-background);
+  --nc-info-fg:       var(--vscode-editorInfo-foreground);
+  --nc-error-bg:      var(--vscode-inputValidation-errorBackground);
+  --nc-error-fg:      var(--vscode-inputValidation-errorForeground);
+
+  /* Severity (vulnerability badges) */
+  --nc-severity-low:      var(--vscode-charts-yellow);
+  --nc-severity-moderate: var(--vscode-charts-orange);
+  --nc-severity-high:     var(--vscode-charts-red);
+  --nc-severity-critical: #ff0000;
+
+  /* Brand */
+  --nc-brand-purple:  var(--vscode-charts-purple);
+  --nc-brand-green:   var(--vscode-charts-green);
+
+  /* Badges */
+  --nc-badge-update:      var(--vscode-textLink-foreground);
+  --nc-badge-prerelease:  #3794ff;
+  --nc-badge-deprecated:  var(--vscode-descriptionForeground);
+  --nc-badge-incompatible: var(--vscode-charts-red);
+  --nc-badge-compatible:  var(--vscode-charts-green);
+}
+
+/* ─────────────────────────────────────────────
+   TYPOGRAPHY TOKENS
+   ───────────────────────────────────────────── */
+:root {
+  /* Font families */
+  --nc-font-ui:       var(--vscode-font-family);
+  --nc-font-mono:     var(--vscode-editor-font-family);
+
+  /* Base scale */
+  --nc-text-base:     var(--vscode-font-size);       /* 13px */
+  --nc-text-sm:       0.85rem;                        /* ~11px — labels, rows */
+  --nc-text-xs:       0.8rem;                         /* ~10.4px — code in banners */
+  --nc-text-header:   0.95rem;                        /* panel title */
+
+  /* Weights */
+  --nc-weight-normal: 400;
+  --nc-weight-bold:   600;
+
+  /* Letter spacing */
+  --nc-tracking-header: 0.02em;
+
+  /* Numeric tabular */
+  --nc-nums-tabular: tabular-nums;
+}
+
+/* ─────────────────────────────────────────────
+   SPACING TOKENS
+   ───────────────────────────────────────────── */
+:root {
+  --nc-space-1:   0.15rem;   /* icon button inner padding */
+  --nc-space-2:   0.25rem;   /* gap between icon buttons */
+  --nc-space-3:   0.35rem;   /* filter label gap, row vertical pad */
+  --nc-space-4:   0.4rem;    /* icon button horizontal pad */
+  --nc-space-5:   0.5rem;    /* header/filter vertical pad */
+  --nc-space-6:   0.75rem;   /* standard horizontal pad, gap in filter bar */
+  --nc-space-8:   1rem;      /* empty state horizontal pad */
+  --nc-space-12:  2rem;      /* empty state vertical pad */
+
+  /* Radii */
+  --nc-radius-sm: 2px;   /* inline code blocks */
+  --nc-radius-md: 3px;   /* icon buttons */
+  --nc-radius-none: 0;
+}
+
+/* ─────────────────────────────────────────────
+   BASE RESET (for design preview only)
+   ───────────────────────────────────────────── */
+.nc-root {
+  font-family: var(--nc-font-ui);
+  font-size: var(--nc-text-base);
+  color: var(--nc-fg-primary);
+  background: var(--nc-bg-app);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}

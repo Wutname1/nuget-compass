@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NuGet Compass — Extension UI Kit (v2)</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; background: #1a1a1a; }
+  body {
+    display: flex; align-items: center; justify-content: center; gap: 28px;
+    padding: 24px; min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+
+  /* VS Code chrome */
+  .vscode-chrome {
+    display: flex; flex-direction: column;
+    width: 1080px; height: 720px;
+    background: #1e1e1e; border-radius: 6px; overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6); flex-shrink: 0;
+  }
+  .chrome-titlebar {
+    height: 30px; background: #3c3c3c;
+    display: flex; align-items: center; padding: 0 12px; gap: 8px; flex-shrink: 0;
+  }
+  .chrome-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .chrome-title { font-size: 11px; color: #858585; margin-left: 8px; }
+  .chrome-editor-area { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+  .activity-bar {
+    width: 46px; background: #333333;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 6px 0; gap: 2px; flex-shrink: 0;
+  }
+  .ab-icon {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px; cursor: pointer; position: relative;
+  }
+  .ab-icon:hover { background: rgba(255,255,255,0.08); }
+  .ab-icon.active { background: rgba(177,128,215,0.12); }
+  .ab-icon.active::before {
+    content: ''; position: absolute; left: 0; top: 6px; bottom: 6px;
+    width: 2px; background: #b180d7; border-radius: 0 2px 2px 0;
+  }
+  .ab-sep { width: 22px; height: 1px; background: #3c3c3c; margin: 4px 0; }
+
+  .editor-main { flex: 1; background: #1e1e1e; display: flex; flex-direction: column; overflow: hidden; }
+  .editor-tabs {
+    height: 35px; background: #2d2d2d;
+    display: flex; align-items: flex-end;
+    border-bottom: 1px solid #252526; flex-shrink: 0;
+  }
+  .editor-tab {
+    padding: 6px 16px; font-size: 11px; color: #858585;
+    border-right: 1px solid #252526; background: #2d2d2d;
+    white-space: nowrap; cursor: default;
+  }
+  .editor-tab.active { color: #cccccc; background: #1e1e1e; border-top: 1px solid #3c3c3c; }
+  .editor-code {
+    flex: 1; padding: 12px 16px; overflow: hidden;
+    font-family: "SF Mono", Consolas, "Courier New", monospace;
+    font-size: 10.5px; line-height: 1.7; color: #569cd6; user-select: none;
+  }
+  .ec-gray { color: #6a9955; }
+  .ec-yellow { color: #dcdcaa; }
+  .ec-orange { color: #ce9178; }
+  .ec-white { color: #d4d4d4; }
+  .ec-purple { color: #c586c0; }
+  .ec-ln { color: #585858; display: inline-block; width: 22px; text-align: right; margin-right: 14px; user-select: none; }
+
+  /* Bottom dock */
+  .bottom-dock {
+    flex-shrink: 0;
+    display: flex; flex-direction: column;
+    border-top: 1px solid #252526; background: #1e1e1e;
+  }
+  .dock-titlebar {
+    height: 28px; background: #2d2d2d;
+    display: flex; align-items: center;
+    border-bottom: 1px solid #252526; flex-shrink: 0;
+  }
+  .dock-tab {
+    padding: 0 14px; height: 100%;
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: #858585; cursor: pointer;
+    border-bottom: 2px solid transparent; border-right: 1px solid #252526;
+    user-select: none; white-space: nowrap;
+  }
+  .dock-tab:hover { color: #cccccc; }
+  .dock-tab.active { color: #cccccc; border-bottom-color: #b180d7; }
+  .dock-drag-handle { flex: 1; height: 100%; cursor: ns-resize; }
+  .dock-actions { display: flex; align-items: center; padding: 0 6px; gap: 2px; }
+
+  .icon-btn {
+    background: transparent; border: 1px solid transparent;
+    color: #858585; padding: 2px 5px; cursor: pointer;
+    border-radius: 3px; font-size: 13px; line-height: 1.2;
+    display: flex; align-items: center;
+  }
+  .icon-btn:hover { background: rgba(128,128,128,0.2); color: #cccccc; }
+  .icon-btn.spinning { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .dock-body { display: flex; overflow: hidden; flex: 1; min-height: 0; }
+
+  /* Panels */
+  .list-panel {
+    display: flex; flex-direction: column; overflow: hidden;
+    border-right: 1px solid #252526;
+    flex-shrink: 0; transition: width 0.18s ease;
+  }
+  .detail-panel {
+    flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    background: #1e1e1e; min-width: 0;
+  }
+  .detail-panel-header {
+    padding: 8px 14px 0; border-bottom: 1px solid #2a2a2a;
+    flex-shrink: 0; background: #1e1e1e;
+  }
+  .detail-pkg-name { font-size: 13px; font-weight: 600; color: #cccccc; margin: 0 0 2px; }
+  .detail-pkg-sub { font-size: 10.5px; color: #858585; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .detail-tabs { display: flex; gap: 0; }
+  .detail-tab {
+    padding: 4px 12px; font-size: 11px; color: #858585;
+    cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
+  }
+  .detail-tab:hover { color: #cccccc; }
+  .detail-tab.active { color: #cccccc; border-bottom-color: #b180d7; }
+  .detail-body {
+    flex: 1; overflow-y: auto; overflow-x: hidden;
+    padding: 12px 14px; font-size: 11px; color: #cccccc;
+  }
+  .detail-body::-webkit-scrollbar { width: 8px; }
+  .detail-body::-webkit-scrollbar-track { background: transparent; }
+  .detail-body::-webkit-scrollbar-thumb { background: #424242; border-radius: 4px; }
+  .detail-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; gap: 8px; color: #525252;
+  }
+  .detail-empty svg { opacity: 0.25; }
+  .detail-empty span { font-size: 11px; }
+
+  .panel { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+  .app-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 10px; border-bottom: 1px solid #2a2a2a;
+    background: #252526; flex-shrink: 0;
+  }
+  .app-header h1 {
+    font-size: 11px; font-weight: 700; margin: 0;
+    letter-spacing: 0.02em; color: #bbbbbb; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .header-actions { display: flex; gap: 2px; }
+
+  /* Filter / control bar */
+  .filter-bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    padding: 5px 10px; border-bottom: 1px solid #2a2a2a;
+    background: #252526; flex-shrink: 0;
+  }
+  .filter-label, .filter-label-cb {
+    display: inline-flex; align-items: center;
+    gap: 4px; font-size: 11px; color: #cccccc; cursor: pointer;
+  }
+  .filter-label select {
+    background: #3c3c3c; color: #cccccc;
+    border: 1px solid #3c3c3c; padding: 1px 4px;
+    font-size: 11px; font-family: inherit; cursor: pointer;
+  }
+  .filter-label select:focus { outline: 1px solid #007fd4; }
+  input[type="checkbox"] { accent-color: #3794ff; cursor: pointer; }
+
+  /* Segmented control: By package / By project */
+  .seg {
+    display: inline-flex; background: #1e1e1e;
+    border: 1px solid #3c3c3c; border-radius: 3px; padding: 1px;
+  }
+  .seg-btn {
+    background: transparent; border: none;
+    color: #858585; font-size: 10.5px;
+    font-family: inherit; padding: 2px 9px;
+    cursor: pointer; border-radius: 2px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .seg-btn:hover { color: #cccccc; }
+  .seg-btn.active { background: rgba(177,128,215,0.18); color: #cccccc; }
+  .seg-btn svg { display: block; }
+
+  .inner-tabs {
+    display: flex; border-bottom: 1px solid #2a2a2a;
+    background: #252526; flex-shrink: 0;
+  }
+  .inner-tab {
+    padding: 5px 10px; font-size: 10.5px;
+    color: #858585; cursor: pointer;
+    border-bottom: 2px solid transparent; white-space: nowrap;
+    background: transparent; border-top: none; border-left: none; border-right: none;
+    font-family: inherit;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .inner-tab:hover { color: #cccccc; }
+  .inner-tab.active { color: #cccccc; border-bottom-color: #b180d7; }
+  .inner-tab .pill {
+    font-size: 9px; padding: 0 5px; border-radius: 8px;
+    background: rgba(55,148,255,0.14); color: #3794ff;
+    font-weight: 500;
+  }
+  .inner-tab .pill.warn { background: rgba(241,76,76,0.14); color: #f14c4c; }
+
+  .scroll-area { flex: 1; overflow-y: auto; overflow-x: hidden; }
+  .scroll-area::-webkit-scrollbar { width: 8px; }
+  .scroll-area::-webkit-scrollbar-track { background: transparent; }
+  .scroll-area::-webkit-scrollbar-thumb { background: #424242; border-radius: 4px; }
+
+  /* Search box */
+  .search-box {
+    display: flex; align-items: center; gap: 6px;
+    background: #1e1e1e; border: 1px solid #3c3c3c;
+    border-radius: 2px; padding: 2px 7px;
+    flex: 1; min-width: 80px;
+  }
+  .search-box input {
+    background: transparent; border: none; outline: none;
+    color: #cccccc; font-size: 11px; flex: 1; font-family: inherit;
+  }
+  .search-box .search-meta { font-size: 9.5px; color: #525252; }
+
+  /* By-package consolidated rows */
+  .pkg-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px 5px 10px;
+    border-bottom: 1px solid #232323;
+    cursor: pointer;
+    font-size: 11px;
+    position: relative;
+  }
+  .pkg-row:hover { background: rgba(255,255,255,0.03); }
+  .pkg-row.selected {
+    background: rgba(55,148,255,0.08);
+    box-shadow: inset 2px 0 0 #3794ff;
+  }
+  .pkg-row .pkg-id-cell {
+    display: flex; flex-direction: column; gap: 3px;
+    min-width: 0; overflow: hidden;
+  }
+  .pkg-id-line {
+    display: flex; align-items: baseline; gap: 6px;
+    overflow: hidden;
+  }
+  .pkg-id {
+    overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; color: #cccccc;
+  }
+  .pkg-id.transitive { color: #707070; }
+  .pkg-id-line .badges { display: inline-flex; gap: 3px; flex-shrink: 0; }
+  .pkg-row.row-transitive { background: rgba(255,255,255,0.012); }
+
+  /* Per-project version chips on the second line */
+  .pkg-projects-line {
+    display: flex; align-items: center; gap: 4px;
+    flex-wrap: wrap; row-gap: 3px;
+  }
+  .proj-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(128,128,128,0.07);
+    border: 1px solid rgba(128,128,128,0.14);
+    border-radius: 9px;
+    padding: 0px 6px 0px 5px;
+    font-size: 9.5px; color: #9a9a9a;
+    line-height: 16px;
+    max-width: 100%;
+  }
+  .proj-chip .pc-name {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 110px;
+  }
+  .proj-chip .pc-ver {
+    color: #cccccc;
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 9.5px; font-variant-numeric: tabular-nums;
+  }
+  .proj-chip.has-update {
+    border-color: rgba(55,148,255,0.32);
+    background: rgba(55,148,255,0.06);
+  }
+  .proj-chip.has-update .pc-ver { color: #cccccc; }
+  .proj-chip.has-vuln { border-color: rgba(241,76,76,0.32); background: rgba(241,76,76,0.06); }
+  .proj-chip-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #4d4d4d; flex-shrink: 0;
+  }
+  .proj-chip.has-update .proj-chip-dot { background: #3794ff; }
+  .proj-chip.has-vuln .proj-chip-dot { background: #f14c4c; }
+  .pkg-divergent-warn {
+    display: inline-flex; align-items: center;
+    font-size: 9px; color: #cca700;
+    background: rgba(204,167,0,0.08);
+    border: 1px solid rgba(204,167,0,0.18);
+    padding: 0 5px; border-radius: 8px;
+    line-height: 14px;
+    gap: 3px;
+    margin-left: 2px;
+  }
+
+  /* Right side of pkg row: target version + count */
+  .pkg-target {
+    display: flex; flex-direction: column; align-items: flex-end;
+    gap: 2px; flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .pkg-target-line {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10.5px; font-family: "SF Mono", Consolas, monospace;
+  }
+  .pkg-target-current { color: #cccccc; }
+  .pkg-target-current.divergent { color: #cca700; }
+  .pkg-target-arrow { color: #3794ff; }
+  .pkg-target-meta {
+    font-size: 9px; color: #707070;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .pkg-target-meta .meta-count {
+    background: rgba(128,128,128,0.10);
+    padding: 0 4px; border-radius: 6px;
+    font-size: 9px;
+  }
+
+  /* Group header row (project / category) */
+  .group-header {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    background: #252526;
+    border-top: 1px solid #2a2a2a;
+    border-bottom: 1px solid #2a2a2a;
+    font-size: 10.5px; color: #b0b0b0; font-weight: 600;
+    cursor: pointer; user-select: none;
+    position: sticky; top: 0;
+    z-index: 5;
+  }
+  .group-chevron {
+    font-size: 9px; color: #858585; transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+  .group-chevron.open { transform: rotate(90deg); }
+  .group-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .group-tfm {
+    font-size: 9.5px; color: #858585; font-weight: 400;
+    background: rgba(128,128,128,0.10);
+    padding: 0 5px; border-radius: 8px;
+    line-height: 14px;
+  }
+  .group-meta {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 9.5px; color: #858585; font-weight: 400;
+  }
+  .group-meta .pip {
+    display: inline-flex; align-items: center; gap: 3px;
+    color: #858585;
+  }
+  .group-meta .pip.upd { color: #3794ff; }
+  .group-meta .pip.vuln { color: #f14c4c; }
+
+  /* Category header (Outdated / Up to date / Vulnerable / Deprecated) */
+  .cat-header {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 10px 3px;
+    font-size: 9.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #707070;
+    background: #1e1e1e;
+    border-top: 1px solid #2a2a2a;
+    border-bottom: 1px solid #2a2a2a;
+    user-select: none; cursor: pointer;
+  }
+  .cat-header .cat-count {
+    color: #858585;
+    background: rgba(128,128,128,0.12);
+    padding: 0 5px; border-radius: 8px;
+    font-size: 9px;
+    letter-spacing: 0;
+  }
+  .cat-header .cat-spacer { flex: 1; }
+
+  /* Badges */
+  .badge {
+    display: inline-flex; align-items: center; gap: 2px;
+    padding: 0px 5px; border-radius: 9px;
+    font-size: 9px; font-weight: 500; border: 1px solid transparent;
+    white-space: nowrap; line-height: 14px;
+  }
+  .b-update    { color: #3794ff; background: rgba(55,148,255,0.1); border-color: rgba(55,148,255,0.2); }
+  .b-compat    { color: #89d185; background: rgba(137,209,133,0.1); border-color: rgba(137,209,133,0.2); }
+  .b-pre       { color: #6ea6ff; background: rgba(110,166,255,0.08); border-color: rgba(110,166,255,0.18); }
+  .b-depr      { color: #858585; background: rgba(128,128,128,0.1); border-color: rgba(128,128,128,0.18); }
+  .b-incompat  { color: #f14c4c; background: rgba(241,76,76,0.1); border-color: rgba(241,76,76,0.2); }
+  .b-vuln      { color: #f14c4c; background: rgba(241,76,76,0.1); border-color: rgba(241,76,76,0.2); }
+  .b-vuln-low  { color: #cca700; background: rgba(204,167,0,0.1); border-color: rgba(204,167,0,0.2); }
+  .b-trans     { color: #707070; background: rgba(128,128,128,0.06); border-color: rgba(128,128,128,0.14); }
+
+  /* Project matrix (in detail panel) */
+  .matrix {
+    border: 1px solid #2a2a2a; border-radius: 3px;
+    overflow: hidden; margin-bottom: 14px;
+  }
+  .matrix-head {
+    display: grid;
+    grid-template-columns: 22px 1fr auto auto auto;
+    gap: 8px;
+    padding: 5px 10px;
+    background: #252526;
+    border-bottom: 1px solid #2a2a2a;
+    font-size: 9.5px; color: #707070;
+    text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
+  }
+  .matrix-head .mh-action { text-align: right; }
+  .matrix-row {
+    display: grid;
+    grid-template-columns: 22px 1fr auto auto auto;
+    gap: 8px; align-items: center;
+    padding: 4px 10px;
+    border-bottom: 1px solid #232323;
+    font-size: 11px;
+  }
+  .matrix-row:last-child { border-bottom: none; }
+  .matrix-row:hover { background: rgba(255,255,255,0.025); }
+  .matrix-proj { color: #cccccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; gap: 6px; align-items: baseline; }
+  .matrix-proj .mt-tfm { font-size: 9.5px; color: #707070; }
+  .matrix-cur { font-family: "SF Mono", Consolas, monospace; color: #cccccc; font-size: 10.5px; font-variant-numeric: tabular-nums; }
+  .matrix-arrow { color: #3794ff; font-size: 10.5px; font-family: "SF Mono", Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .matrix-arrow.dim { color: #444; }
+  .matrix-action button {
+    background: #0e639c; color: #fff; border: none; border-radius: 2px;
+    padding: 2px 8px; font-size: 10px; cursor: pointer; font-family: inherit;
+  }
+  .matrix-action button:hover { background: #1177bb; }
+  .matrix-action button:disabled { background: #2a2a2a; color: #555; cursor: default; }
+  .matrix-bulk {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 10px;
+    background: #1c1c1c;
+    border-bottom: 1px solid #2a2a2a;
+    font-size: 11px;
+  }
+  .matrix-bulk .ver-input {
+    background: #1e1e1e; border: 1px solid #3c3c3c; color: #cccccc;
+    font-size: 10.5px; padding: 1px 6px; border-radius: 2px;
+    font-family: "SF Mono", Consolas, monospace;
+    width: 110px;
+  }
+  .matrix-bulk button {
+    background: #0e639c; color: #fff; border: none; border-radius: 2px;
+    padding: 2px 10px; font-size: 10.5px; cursor: pointer; font-family: inherit;
+    margin-left: auto;
+  }
+  .matrix-bulk button:hover { background: #1177bb; }
+
+  /* Detail meta */
+  .desc-meta { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 11px; margin-bottom: 12px; }
+  .desc-meta-label { color: #525252; white-space: nowrap; }
+  .desc-meta-value { color: #9d9d9d; }
+  .desc-meta-value a { color: #3794ff; text-decoration: none; }
+  .desc-meta-value a:hover { text-decoration: underline; }
+
+  /* Banner */
+  .banner {
+    padding: 5px 10px; font-size: 11px;
+    border-bottom: 1px solid transparent;
+    display: flex; align-items: flex-start; gap: 6px;
+  }
+  .banner-info { background: rgba(0,107,179,0.15); color: #75beff; }
+  .banner-warn { background: rgba(204,167,0,0.1); color: #cca700; }
+  .banner-spin {
+    width: 10px; height: 10px;
+    border: 1.5px solid rgba(117,190,255,0.3); border-top-color: #75beff;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .banner-link { color: #3794ff; text-decoration: underline; cursor: pointer; }
+
+  /* Empty state */
+  .empty-state {
+    padding: 28px 16px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .empty-icon { opacity: 0.35; margin-bottom: 4px; }
+  .empty-title { font-size: 12px; color: #cccccc; }
+  .empty-sub { font-size: 11px; color: #858585; }
+  .empty-sub code { font-family: "SF Mono", Consolas, monospace; font-size: 0.9em; background: rgba(128,128,128,0.15); padding: 0 3px; border-radius: 2px; }
+
+  /* Modal */
+  .modal-overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center; z-index: 100;
+    border-radius: 6px;
+  }
+  .modal {
+    background: #252526; border: 1px solid #3c3c3c; border-radius: 4px;
+    padding: 16px; width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  .modal-title { font-size: 12px; font-weight: 600; color: #cccccc; margin: 0 0 8px; }
+  .modal-body { font-size: 11px; color: #cccccc; margin: 0 0 16px; line-height: 1.5; }
+  .modal-body strong { color: #ffffff; }
+  .modal-body code { font-family: "SF Mono", Consolas, monospace; font-size: 0.9em; background: rgba(128,128,128,0.15); padding: 0 3px; border-radius: 2px; color: #b180d7; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn { padding: 4px 12px; border-radius: 2px; font-size: 11px; cursor: pointer; border: 1px solid transparent; font-family: inherit; }
+  .btn-cancel { background: transparent; color: #cccccc; border-color: #3c3c3c; }
+  .btn-cancel:hover { background: rgba(128,128,128,0.15); }
+  .btn-primary { background: #0e639c; color: #ffffff; border-color: #0e639c; }
+  .btn-primary:hover { background: #1177bb; }
+
+  /* Toast */
+  .toast {
+    position: absolute; bottom: 8px; left: 8px; right: 8px;
+    background: rgba(30,30,30,0.95);
+    border: 1px solid rgba(137,209,133,0.3);
+    border-radius: 2px; padding: 6px 10px;
+    font-size: 11px; color: #89d185;
+    display: flex; align-items: center; gap: 8px; z-index: 50;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  .toast-link { color: #3794ff; text-decoration: underline; cursor: pointer; margin-left: auto; }
+
+  /* README */
+  .readme-content { line-height: 1.7; }
+  .readme-content h2 { font-size: 12px; font-weight: 600; color: #cccccc; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #2a2a2a; }
+  .readme-content h3 { font-size: 11.5px; font-weight: 600; color: #cccccc; margin: 10px 0 4px; }
+  .readme-content p { margin: 0 0 8px; color: #9d9d9d; font-size: 11px; }
+  .readme-content code { font-family: "SF Mono", Consolas, monospace; font-size: 0.9em; background: rgba(128,128,128,0.15); padding: 1px 4px; border-radius: 2px; color: #ce9178; }
+  .readme-content pre { background: #2d2d2d; border: 1px solid #3c3c3c; border-radius: 3px; padding: 8px 10px; margin: 6px 0; overflow-x: auto; }
+  .readme-content pre code { background: none; padding: 0; font-size: 10px; color: #d4d4d4; }
+  .readme-content ul { margin: 4px 0 8px; padding-left: 18px; }
+  .readme-content li { color: #9d9d9d; font-size: 11px; margin-bottom: 2px; }
+
+  /* Versions table */
+  .ver-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .ver-table th { text-align: left; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em; color: #525252; font-weight: 600; padding: 0 8px 6px; border-bottom: 1px solid #2a2a2a; }
+  .ver-table td { padding: 5px 8px; border-bottom: 1px solid #1a1a1a; vertical-align: middle; }
+  .ver-table tr:hover td { background: rgba(255,255,255,0.03); }
+  .ver-row-num { font-variant-numeric: tabular-nums; color: #cccccc; font-family: "SF Mono", Consolas, monospace; }
+  .ver-row-date { color: #858585; }
+  .ver-row-action button {
+    background: #0e639c; color: #fff; border: none; border-radius: 2px;
+    padding: 2px 8px; font-size: 10px; cursor: pointer; font-family: inherit;
+  }
+  .ver-row-action button:hover { background: #1177bb; }
+
+  /* Release notes */
+  .rn-entry { border-bottom: 1px solid #2a2a2a; padding: 8px 0; }
+  .rn-entry:last-child { border-bottom: none; }
+  .rn-ver { font-size: 11px; font-family: "SF Mono", Consolas, monospace; color: #cccccc; font-weight: 600; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }
+  .rn-date { font-size: 9.5px; color: #525252; font-weight: 400; font-family: inherit; }
+  .rn-items { margin: 4px 0 0 0; padding-left: 16px; }
+  .rn-items li { font-size: 10.5px; color: #9d9d9d; margin-bottom: 2px; line-height: 1.5; }
+
+  /* Demo panel */
+  .demo-controls { width: 200px; flex-shrink: 0; align-self: flex-start; padding-top: 4px; }
+  .demo-title { font-size: 11px; font-weight: 600; color: #858585; letter-spacing: 0.07em; text-transform: uppercase; margin: 0 0 10px; }
+  .demo-section { margin-bottom: 14px; }
+  .demo-section-title { font-size: 10px; color: #525252; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
+  .demo-btn {
+    display: block; width: 100%; text-align: left;
+    background: #2d2d2d; border: 1px solid #3c3c3c;
+    color: #858585; padding: 4px 9px; border-radius: 2px;
+    font-size: 11px; cursor: pointer; font-family: inherit; margin-bottom: 3px;
+  }
+  .demo-btn:hover { background: #333; color: #cccccc; border-color: #4a4a4a; }
+  .demo-btn.active { background: rgba(55,148,255,0.1); color: #3794ff; border-color: rgba(55,148,255,0.3); }
+
+  /* Browse panel */
+  .browse-result {
+    padding: 7px 10px; border-bottom: 1px solid #2a2a2a;
+    display: grid; grid-template-columns: 1fr auto;
+    gap: 8px; align-items: start; cursor: pointer;
+  }
+  .browse-result:hover { background: rgba(255,255,255,0.03); }
+  .browse-result.selected { background: rgba(55,148,255,0.08); box-shadow: inset 2px 0 0 #3794ff; }
+
+  /* Updates panel */
+  .upd-row {
+    display: grid;
+    grid-template-columns: 18px 1fr auto;
+    gap: 8px; align-items: center;
+    padding: 4px 10px; font-size: 11px;
+    border-bottom: 1px solid #232323;
+    cursor: pointer;
+  }
+  .upd-row:hover { background: rgba(255,255,255,0.03); }
+  .upd-row.selected { background: rgba(55,148,255,0.08); box-shadow: inset 2px 0 0 #3794ff; }
+
+  /* CPM rows */
+  .cpm-row {
+    display: grid; grid-template-columns: 1fr auto auto;
+    gap: 8px; align-items: center; padding: 4px 10px;
+    border-bottom: 1px solid #232323; font-size: 11px;
+    cursor: pointer;
+  }
+  .cpm-row:hover { background: rgba(255,255,255,0.03); }
+  .cpm-row.selected { background: rgba(55,148,255,0.08); box-shadow: inset 2px 0 0 #3794ff; }
+
+  /* Inline note bar (top of detail) */
+  .note-bar {
+    background: rgba(204,167,0,0.06);
+    border: 1px solid rgba(204,167,0,0.2);
+    border-radius: 3px;
+    padding: 5px 8px;
+    font-size: 10.5px; color: #cca700;
+    margin-bottom: 12px;
+    line-height: 1.5;
+    display: flex; gap: 6px; align-items: flex-start;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo, useEffect } = React;
+
+/* ════════════════════════════════════════════════
+   DATA — A real-world solution: 6 csproj × varied packages
+════════════════════════════════════════════════ */
+const PROJECTS = [
+  { id: 'p1', name: 'Acme.Web',           tfm: 'net8.0' },
+  { id: 'p2', name: 'Acme.Api',           tfm: 'net8.0' },
+  { id: 'p3', name: 'Acme.Domain',        tfm: 'netstandard2.1' },
+  { id: 'p4', name: 'Acme.Infrastructure',tfm: 'net8.0' },
+  { id: 'p5', name: 'Acme.Workers',       tfm: 'net9.0' },
+  { id: 'p6', name: 'Acme.Tests',         tfm: 'net8.0' },
+];
+
+/* Each install: [pkgId, projectId, currentVersion, latest, vuln, depr, transitive] */
+const INSTALLS_RAW = [
+  // Across many projects (the reason we need consolidation)
+  ['Microsoft.EntityFrameworkCore', 'p1', '8.0.0',  '8.0.26', null,   false, false],
+  ['Microsoft.EntityFrameworkCore', 'p2', '8.0.4',  '8.0.26', null,   false, false],
+  ['Microsoft.EntityFrameworkCore', 'p4', '8.0.0',  '8.0.26', null,   false, false],
+  ['Microsoft.EntityFrameworkCore', 'p5', '9.0.0',  '9.0.4',  null,   false, false],
+
+  ['Serilog',                       'p1', '4.0.0',  '4.2.0',  null,   false, false],
+  ['Serilog',                       'p2', '4.0.0',  '4.2.0',  null,   false, false],
+  ['Serilog',                       'p4', '3.1.1',  '4.2.0',  null,   false, false],
+  ['Serilog',                       'p5', '4.0.0',  '4.2.0',  null,   false, false],
+
+  ['Newtonsoft.Json',               'p1', '13.0.1', null,     null,   true,  false],
+  ['Newtonsoft.Json',               'p3', '12.0.3', null,     null,   true,  false],
+  ['Newtonsoft.Json',               'p4', '13.0.1', null,     null,   true,  false],
+
+  ['AutoMapper',                    'p1', '12.0.1', null,     'High', false, false],
+  ['AutoMapper',                    'p2', '12.0.1', null,     'High', false, false],
+  ['AutoMapper',                    'p4', '12.0.1', null,     'High', false, false],
+
+  ['MediatR',                       'p1', '12.2.0', '12.5.0', null,   false, false],
+  ['MediatR',                       'p2', '12.2.0', '12.5.0', null,   false, false],
+
+  ['FluentValidation',              'p1', '11.8.0', '11.12.0',null,   false, false],
+  ['FluentValidation',              'p3', '11.8.0', '11.12.0',null,   false, false],
+
+  ['System.Text.Json',              'p2', '8.0.0',  '9.0.5',  'Low',  false, false],
+  ['System.Text.Json',              'p4', '8.0.0',  '9.0.5',  'Low',  false, false],
+  ['System.Text.Json',              'p5', '9.0.0',  '9.0.5',  null,   false, false],
+
+  ['Polly',                         'p4', '8.4.0',  null,     null,   false, false],
+  ['Polly',                         'p5', '8.4.0',  null,     null,   false, false],
+
+  ['Dapper',                        'p4', '2.1.21', '2.1.72', null,   false, false],
+
+  ['Microsoft.Extensions.Configuration', 'p1', '8.0.0', '8.0.26', null, false, false],
+  ['Microsoft.Extensions.Configuration', 'p4', '8.0.0', '8.0.26', null, false, false],
+
+  ['Microsoft.AspNetCore.Authentication.JwtBearer', 'p1', '8.0.0', '8.0.26', null, false, false],
+  ['Microsoft.AspNetCore.Authentication.JwtBearer', 'p2', '8.0.0', '8.0.26', null, false, false],
+
+  ['Swashbuckle.AspNetCore',        'p1', '6.5.0',  '6.7.0',  null,   false, false],
+  ['Swashbuckle.AspNetCore',        'p2', '6.5.0',  '6.7.0',  null,   false, false],
+
+  ['StackExchange.Redis',           'p4', '2.7.33', '2.8.16', null,   false, false],
+
+  ['xunit',                         'p6', '2.6.6',  '2.9.2',  null,   false, false],
+  ['Moq',                           'p6', '4.20.70','4.20.72',null,   false, false],
+  ['FluentAssertions',              'p6', '6.12.0', '7.0.0',  null,   false, false],
+
+  // A couple of transitives
+  ['Microsoft.Extensions.Logging',  'p1', '8.0.0',  null,     null,   false, true],
+  ['Microsoft.Extensions.Logging',  'p2', '8.0.0',  null,     null,   false, true],
+];
+
+const INSTALLS = INSTALLS_RAW.map(([id, pid, cur, newer, vuln, depr, transitive]) => ({
+  id, projectId: pid, cur, newer, vuln, depr, transitive,
+}));
+
+/* Aggregate per package */
+function aggregatePackages(includeTransitive) {
+  const map = new Map();
+  for (const inst of INSTALLS) {
+    if (inst.transitive && !includeTransitive) continue;
+    if (!map.has(inst.id)) map.set(inst.id, {
+      id: inst.id,
+      installs: [],
+      transitive: inst.transitive,
+    });
+    map.get(inst.id).installs.push(inst);
+  }
+  const arr = [];
+  for (const pkg of map.values()) {
+    const versions = [...new Set(pkg.installs.map(i => i.cur))];
+    const latest = pkg.installs.find(i => i.newer)?.newer || null;
+    const hasUpdate = !!latest && !pkg.installs.every(i => i.cur === latest);
+    const hasVuln = pkg.installs.some(i => i.vuln);
+    const isDepr = pkg.installs.some(i => i.depr);
+    const isDivergent = versions.length > 1;
+    arr.push({
+      ...pkg,
+      versions,
+      latest,
+      hasUpdate,
+      hasVuln,
+      isDepr,
+      isDivergent,
+      vuln: pkg.installs.find(i => i.vuln)?.vuln || null,
+    });
+  }
+  arr.sort((a, b) => a.id.localeCompare(b.id));
+  return arr;
+}
+
+const PROJECT_BY_ID = Object.fromEntries(PROJECTS.map(p => [p.id, p]));
+
+/* Categorize for "By package" view */
+function categorize(pkg) {
+  if (pkg.hasVuln) return 'vuln';
+  if (pkg.isDepr) return 'depr';
+  if (pkg.hasUpdate) return 'outdated';
+  return 'current';
+}
+const CAT_LABEL = {
+  vuln: 'Vulnerable',
+  depr: 'Deprecated',
+  outdated: 'Outdated',
+  current: 'Up to date',
+};
+const CAT_ORDER = ['vuln', 'depr', 'outdated', 'current'];
+
+/* ════════════════════════════════════════════════
+   PACKAGE METADATA (for detail panel)
+════════════════════════════════════════════════ */
+const PKG_DETAILS = {
+  'Microsoft.EntityFrameworkCore': {
+    description: 'Entity Framework Core is the modern object-database mapper for .NET. It supports LINQ queries, change tracking, updates, and schema migrations.',
+    authors: 'Microsoft',
+    license: 'MIT',
+    projectUrl: 'https://learn.microsoft.com/ef/core',
+    downloads: '1.4B',
+    releaseNotes: [
+      { version: '8.0.26', date: '2025-11-12', items: ['Patch release with SQL Server provider fixes.', 'Updated dependency on System.Diagnostics.DiagnosticSource.'] },
+      { version: '8.0.14', date: '2025-04-08', items: ['Bug fixes around tracked entity removal.', 'Performance fix in compiled queries.'] },
+      { version: '9.0.4',  date: '2025-04-10', items: ['Patch release for the 9.x line.'] },
+    ],
+    versions: [
+      { v: '9.0.4', date: '2025-04-10', compat: false, framework: 'net9.0', pre: false },
+      { v: '8.0.26', date: '2025-11-12', compat: true, pre: false },
+      { v: '8.0.14', date: '2025-04-08', compat: true, pre: false },
+      { v: '8.0.4', date: '2024-05-09', compat: true, pre: false },
+      { v: '8.0.0', date: '2023-11-14', compat: true, pre: false },
+    ],
+  },
+  'Newtonsoft.Json': {
+    description: 'Json.NET is a popular high-performance JSON framework for .NET. Note: Microsoft now recommends System.Text.Json for new projects.',
+    authors: 'James Newton-King',
+    license: 'MIT',
+    projectUrl: 'https://www.newtonsoft.com/json',
+    downloads: '3.2B',
+    deprecated: 'Use System.Text.Json — Newtonsoft.Json is in maintenance mode.',
+    releaseNotes: [
+      { version: '13.0.3', date: '2023-03-08', items: ['Fix race in JsonConverter caching.', 'No active development beyond critical fixes.'] },
+    ],
+    versions: [
+      { v: '13.0.3', date: '2023-03-08', compat: true, pre: false },
+      { v: '13.0.1', date: '2021-03-22', compat: true, pre: false },
+      { v: '12.0.3', date: '2019-11-09', compat: true, pre: false },
+    ],
+  },
+  'AutoMapper': {
+    description: 'A convention-based object-to-object mapper. Versions earlier than 13.0 contain a high-severity vulnerability (CVE-2025-1234).',
+    authors: 'Jimmy Bogard',
+    license: 'MIT',
+    projectUrl: 'https://automapper.org',
+    downloads: '892M',
+    vulnerability: { cve: 'CVE-2025-1234', severity: 'High', fixed: '13.0.0', notes: 'Improper deserialization of profile assemblies.' },
+    releaseNotes: [
+      { version: '13.0.0', date: '2024-12-04', items: ['Security fix for CVE-2025-1234.', 'Breaking: removed obsolete static API.'] },
+    ],
+    versions: [
+      { v: '13.0.0', date: '2024-12-04', compat: true, pre: false },
+      { v: '12.0.1', date: '2023-02-15', compat: true, pre: false },
+    ],
+  },
+};
+
+function getPkgDetail(pkg) {
+  return PKG_DETAILS[pkg.id] || {
+    description: `${pkg.id} is a .NET library used by your solution.`,
+    authors: 'Various',
+    license: 'MIT',
+    projectUrl: `https://nuget.org/packages/${pkg.id}`,
+    downloads: '—',
+    releaseNotes: pkg.latest ? [
+      { version: pkg.latest, date: '2025-09-01', items: ['Latest release.'] },
+    ] : [],
+    versions: [
+      ...(pkg.latest ? [{ v: pkg.latest, date: '2025-09-01', compat: true, pre: false }] : []),
+      ...pkg.versions.map(v => ({ v, date: '2024-06-15', compat: true, pre: false })),
+    ],
+  };
+}
+
+/* ════════════════════════════════════════════════
+   SHARED COMPONENTS
+════════════════════════════════════════════════ */
+function Spinner({ size = 10 }) {
+  return <div style={{
+    width: size, height: size,
+    border: `1.5px solid rgba(117,190,255,0.3)`,
+    borderTopColor: '#75beff',
+    borderRadius: '50%',
+    animation: 'spin 0.8s linear infinite',
+    flexShrink: 0,
+  }} />;
+}
+
+function PkgBadges({ pkg }) {
+  const out = [];
+  if (pkg.hasVuln) out.push(<span key="v" className="badge b-vuln">⚠ {pkg.vuln}</span>);
+  if (pkg.isDepr) out.push(<span key="d" className="badge b-depr">🪦 deprecated</span>);
+  if (pkg.transitive) out.push(<span key="t" className="badge b-trans">transitive</span>);
+  if (pkg.isDivergent) out.push(<span key="dv" className="pkg-divergent-warn">⚠ {pkg.versions.length} versions</span>);
+  return <>{out}</>;
+}
+
+/* ════════════════════════════════════════════════
+   BY-PACKAGE LIST ROW
+════════════════════════════════════════════════ */
+function ByPackageRow({ pkg, selected, onSelect }) {
+  const updatableProjects = pkg.installs.filter(i => i.newer && i.cur !== i.newer);
+  const [open, setOpen] = useState(true); // expand project chips by default? yes for divergent
+
+  // Determine target version display
+  let versionDisplay;
+  if (pkg.isDivergent) {
+    versionDisplay = (
+      <span className="pkg-target-line">
+        <span className="pkg-target-current divergent">{pkg.versions.length} versions</span>
+        {pkg.latest && <><span className="pkg-target-arrow">→</span><span style={{color:'#3794ff'}}>{pkg.latest}</span></>}
+      </span>
+    );
+  } else {
+    versionDisplay = (
+      <span className="pkg-target-line">
+        <span className="pkg-target-current">{pkg.versions[0]}</span>
+        {pkg.latest && pkg.latest !== pkg.versions[0] && (
+          <><span className="pkg-target-arrow">→</span><span style={{color:'#3794ff'}}>{pkg.latest}</span></>
+        )}
+      </span>
+    );
+  }
+
+  return (
+    <div className={`pkg-row${selected ? ' selected' : ''}${pkg.transitive ? ' row-transitive' : ''}`}
+         onClick={() => onSelect(pkg)}>
+      <div className="pkg-id-cell">
+        <div className="pkg-id-line">
+          <span className={`pkg-id${pkg.transitive ? ' transitive' : ''}`}>{pkg.id}</span>
+          <span className="badges"><PkgBadges pkg={pkg} /></span>
+        </div>
+        <div className="pkg-projects-line">
+          {pkg.installs.map(inst => {
+            const proj = PROJECT_BY_ID[inst.projectId];
+            const isUpdate = inst.newer && inst.cur !== inst.newer;
+            const isVuln = !!inst.vuln;
+            return (
+              <span key={inst.projectId}
+                    className={`proj-chip${isUpdate ? ' has-update' : ''}${isVuln ? ' has-vuln' : ''}`}
+                    title={`${proj.name} (${proj.tfm})`}>
+                <span className="proj-chip-dot"></span>
+                <span className="pc-name">{proj.name}</span>
+                <span className="pc-ver">{inst.cur}</span>
+              </span>
+            );
+          })}
+        </div>
+      </div>
+      <div className="pkg-target">
+        {versionDisplay}
+        <div className="pkg-target-meta">
+          <span className="meta-count">{pkg.installs.length} {pkg.installs.length === 1 ? 'project' : 'projects'}</span>
+          {updatableProjects.length > 0 && (
+            <span style={{color:'#3794ff'}}>{updatableProjects.length} can update</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════
+   BY-PROJECT LIST (legacy view)
+════════════════════════════════════════════════ */
+function ByProjectGroup({ project, packages, selected, onSelect }) {
+  const [open, setOpen] = useState(true);
+  const projInstalls = INSTALLS.filter(i => i.projectId === project.id && !i.transitive);
+  const updates = projInstalls.filter(i => i.newer && i.cur !== i.newer).length;
+  const vulns = projInstalls.filter(i => i.vuln).length;
+  return (
+    <div>
+      <div className="group-header" onClick={() => setOpen(o => !o)}>
+        <span className={`group-chevron${open ? ' open' : ''}`}>▶</span>
+        <span className="group-name">{project.name}</span>
+        <span className="group-tfm">{project.tfm}</span>
+        <div className="group-meta">
+          <span className="pip">{projInstalls.length} pkg</span>
+          {updates > 0 && <span className="pip upd">↑ {updates}</span>}
+          {vulns > 0 && <span className="pip vuln">⚠ {vulns}</span>}
+        </div>
+      </div>
+      {open && projInstalls.map(inst => {
+        // Build a single-project pkg object to reuse the row
+        const pkgFull = packages.find(p => p.id === inst.id);
+        if (!pkgFull) return null;
+        return (
+          <div key={inst.id}
+               className={`pkg-row${selected?.id === inst.id ? ' selected' : ''}`}
+               onClick={() => onSelect(pkgFull)}
+               style={{gridTemplateColumns:'1fr auto'}}>
+            <div className="pkg-id-cell">
+              <div className="pkg-id-line">
+                <span className="pkg-id">{inst.id}</span>
+                {inst.vuln && <span className="badge b-vuln">⚠ {inst.vuln}</span>}
+                {inst.depr && <span className="badge b-depr">🪦</span>}
+                {pkgFull.isDivergent && <span className="pkg-divergent-warn" title="This package has different versions across projects">≠</span>}
+              </div>
+            </div>
+            <div className="pkg-target">
+              <span className="pkg-target-line">
+                <span className="pkg-target-current">{inst.cur}</span>
+                {inst.newer && inst.newer !== inst.cur && <><span className="pkg-target-arrow">→</span><span style={{color:'#3794ff'}}>{inst.newer}</span></>}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════
+   INSTALLED PANEL (left list)
+════════════════════════════════════════════════ */
+function InstalledList({ groupBy, includeTransitive, query, selected, onSelect }) {
+  const packages = useMemo(() => aggregatePackages(includeTransitive), [includeTransitive]);
+  const filtered = useMemo(() => {
+    if (!query) return packages;
+    const q = query.toLowerCase();
+    return packages.filter(p => p.id.toLowerCase().includes(q));
+  }, [packages, query]);
+
+  if (groupBy === 'project') {
+    return (
+      <div>
+        {PROJECTS.map(proj => (
+          <ByProjectGroup key={proj.id} project={proj}
+            packages={filtered} selected={selected} onSelect={onSelect} />
+        ))}
+      </div>
+    );
+  }
+
+  // By package, grouped by category
+  const byCat = { vuln: [], depr: [], outdated: [], current: [] };
+  for (const p of filtered) byCat[categorize(p)].push(p);
+
+  return (
+    <div>
+      {CAT_ORDER.map(cat => {
+        const items = byCat[cat];
+        if (items.length === 0) return null;
+        return (
+          <CategorySection key={cat} cat={cat} items={items}
+            selected={selected} onSelect={onSelect} />
+        );
+      })}
+    </div>
+  );
+}
+
+function CategorySection({ cat, items, selected, onSelect }) {
+  const [open, setOpen] = useState(cat !== 'current');
+  return (
+    <div>
+      <div className="cat-header" onClick={() => setOpen(o => !o)}>
+        <span className={`group-chevron${open ? ' open' : ''}`}>▶</span>
+        <span>{CAT_LABEL[cat]}</span>
+        <span className="cat-count">{items.length}</span>
+        <span className="cat-spacer"></span>
+        {cat === 'outdated' && <span style={{fontSize:9.5,color:'#3794ff',textTransform:'none',letterSpacing:0}}>Update all ↑</span>}
+      </div>
+      {open && items.map(pkg => (
+        <ByPackageRow key={pkg.id} pkg={pkg}
+          selected={selected?.id === pkg.id} onSelect={onSelect} />
+      ))}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════
+   DETAIL PANEL — works for any tab's selection
+════════════════════════════════════════════════ */
+const DETAIL_TABS_INSTALLED = ['Projects', 'Description', 'Release Notes', 'Versions'];
+const DETAIL_TABS_BROWSE    = ['Description', 'README', 'Versions', 'Add to projects'];
+const DETAIL_TABS_UPDATES   = ['Projects', 'Release Notes', 'Versions', 'Description'];
+const DETAIL_TABS_CPM       = ['Projects', 'Description', 'Versions'];
+
+function getTabsForContext(ctx) {
+  switch (ctx) {
+    case 'browse': return DETAIL_TABS_BROWSE;
+    case 'updates': return DETAIL_TABS_UPDATES;
+    case 'cpm': return DETAIL_TABS_CPM;
+    default: return DETAIL_TABS_INSTALLED;
+  }
+}
+
+function DetailPanel({ pkg, context, onUpdate, onMatchVersions }) {
+  const tabs = getTabsForContext(context);
+  const [tab, setTab] = useState(tabs[0]);
+  useEffect(() => { setTab(tabs[0]); }, [pkg?.id, context]);
+
+  if (!pkg) {
+    return (
+      <div className="detail-panel">
+        <div className="detail-empty">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <path d="M9 9h6M9 13h4"/>
+          </svg>
+          <span>Select a package to view details</span>
+        </div>
+      </div>
+    );
+  }
+
+  const detail = getPkgDetail(pkg);
+
+  // Subtitle line metadata
+  const subBits = [];
+  if (pkg.installs?.length) subBits.push(`in ${pkg.installs.length} ${pkg.installs.length === 1 ? 'project' : 'projects'}`);
+  if (pkg.isDivergent) subBits.push(`${pkg.versions.length} versions in use`);
+  if (pkg.latest) subBits.push(`latest ${pkg.latest}`);
+
+  return (
+    <div className="detail-panel">
+      <div className="detail-panel-header">
+        <div className="detail-pkg-name">{pkg.id}</div>
+        <div className="detail-pkg-sub">
+          {subBits.map((b, i) => <span key={i}>{i > 0 && <span style={{color:'#444',marginRight:8}}>·</span>}{b}</span>)}
+        </div>
+        <div className="detail-tabs">
+          {tabs.map(t => (
+            <div key={t} className={`detail-tab${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>{t}</div>
+          ))}
+        </div>
+      </div>
+      <div className="detail-body">
+        {tab === 'Projects' && <ProjectsTab pkg={pkg} onUpdate={onUpdate} onMatchVersions={onMatchVersions} />}
+        {tab === 'Description' && <DescriptionTab pkg={pkg} detail={detail} />}
+        {tab === 'Release Notes' && <ReleaseNotesTab detail={detail} />}
+        {tab === 'README' && <ReadmeTab pkg={pkg} />}
+        {tab === 'Versions' && <VersionsTab pkg={pkg} detail={detail} onUpdate={onUpdate} />}
+        {tab === 'Add to projects' && <AddToProjectsTab pkg={pkg} />}
+      </div>
+    </div>
+  );
+}
+
+function ProjectsTab({ pkg, onUpdate, onMatchVersions }) {
+  const [target, setTarget] = useState(pkg.latest || pkg.versions[0]);
+  const [selected, setSelected] = useState(new Set(pkg.installs.map(i => i.projectId)));
+
+  function toggle(pid) {
+    setSelected(prev => {
+      const s = new Set(prev);
+      s.has(pid) ? s.delete(pid) : s.add(pid);
+      return s;
+    });
+  }
+
+  const installs = pkg.installs || [];
+  const eligibleCount = installs.filter(i => i.cur !== target && selected.has(i.projectId)).length;
+
+  return (
+    <div>
+      {pkg.isDivergent && (
+        <div className="note-bar">
+          <span>⚠</span>
+          <span><strong style={{color:'#cca700'}}>Version drift.</strong> This package is installed at {pkg.versions.length} different versions ({pkg.versions.join(', ')}). Set a single target below to align all projects.</span>
+        </div>
+      )}
+
+      <div className="matrix">
+        <div className="matrix-bulk">
+          <span style={{color:'#cccccc'}}>Set all to</span>
+          <input className="ver-input" value={target} onChange={e => setTarget(e.target.value)} />
+          <span style={{color:'#707070',fontSize:10}}>·</span>
+          <span style={{fontSize:10,color:'#858585'}}>{selected.size} of {installs.length} selected</span>
+          <button onClick={() => onMatchVersions && onMatchVersions(pkg.id, target, [...selected])}
+                  disabled={eligibleCount === 0}
+                  style={{opacity: eligibleCount === 0 ? 0.4 : 1}}>
+            Apply to {eligibleCount}
+          </button>
+        </div>
+        <div className="matrix-head">
+          <span></span>
+          <span>Project</span>
+          <span>Current</span>
+          <span></span>
+          <span className="mh-action">Action</span>
+        </div>
+        {installs.map(inst => {
+          const proj = PROJECT_BY_ID[inst.projectId];
+          const isSel = selected.has(inst.projectId);
+          const wouldChange = inst.cur !== target;
+          return (
+            <div key={inst.projectId} className="matrix-row">
+              <input type="checkbox" checked={isSel} onChange={() => toggle(inst.projectId)} />
+              <span className="matrix-proj">
+                {proj.name}
+                <span className="mt-tfm">{proj.tfm}</span>
+                {inst.vuln && <span className="badge b-vuln" style={{fontSize:8.5}}>⚠ {inst.vuln}</span>}
+              </span>
+              <span className="matrix-cur">{inst.cur}</span>
+              <span className={`matrix-arrow${wouldChange ? '' : ' dim'}`}>
+                {wouldChange ? `→ ${target}` : '—'}
+              </span>
+              <span className="matrix-action" style={{textAlign:'right'}}>
+                {wouldChange
+                  ? <button onClick={() => onUpdate(pkg.id, target, [inst.projectId])}>Update</button>
+                  : <span style={{color:'#525252',fontSize:10}}>up to date</span>}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="desc-meta">
+        <span className="desc-meta-label">Latest</span>
+        <span className="desc-meta-value" style={{color:'#3794ff',fontFamily:'SF Mono,Consolas,monospace'}}>{pkg.latest || '—'}</span>
+        <span className="desc-meta-label">Versions in use</span>
+        <span className="desc-meta-value" style={{fontFamily:'SF Mono,Consolas,monospace'}}>{pkg.versions.join(', ')}</span>
+      </div>
+    </div>
+  );
+}
+
+function DescriptionTab({ pkg, detail }) {
+  return (
+    <div>
+      {detail.deprecated && (
+        <div className="note-bar" style={{background:'rgba(128,128,128,0.06)',borderColor:'rgba(128,128,128,0.2)',color:'#aaa'}}>
+          <span>🪦</span>
+          <span><strong style={{color:'#ccc'}}>Deprecated.</strong> {detail.deprecated}</span>
+        </div>
+      )}
+      {detail.vulnerability && (
+        <div className="note-bar" style={{background:'rgba(241,76,76,0.06)',borderColor:'rgba(241,76,76,0.25)',color:'#f48771'}}>
+          <span>⚠</span>
+          <span><strong style={{color:'#f14c4c'}}>{detail.vulnerability.severity} severity — {detail.vulnerability.cve}.</strong> Fixed in <code style={{background:'rgba(0,0,0,0.3)',padding:'0 4px',borderRadius:2}}>{detail.vulnerability.fixed}</code>. {detail.vulnerability.notes}</span>
+        </div>
+      )}
+      <p style={{color:'#9d9d9d',fontSize:11,lineHeight:1.7,margin:'0 0 12px'}}>{detail.description}</p>
+      <div className="desc-meta">
+        <span className="desc-meta-label">Authors</span>
+        <span className="desc-meta-value">{detail.authors}</span>
+        <span className="desc-meta-label">License</span>
+        <span className="desc-meta-value">{detail.license}</span>
+        <span className="desc-meta-label">Downloads</span>
+        <span className="desc-meta-value">{detail.downloads}</span>
+        <span className="desc-meta-label">Project URL</span>
+        <span className="desc-meta-value"><a href="#">{detail.projectUrl}</a></span>
+      </div>
+    </div>
+  );
+}
+
+function ReleaseNotesTab({ detail }) {
+  if (!detail.releaseNotes?.length) return <div style={{color:'#525252',fontSize:11}}>No release notes available.</div>;
+  return (
+    <div>
+      {detail.releaseNotes.map((rel) => (
+        <div key={rel.version} className="rn-entry">
+          <div className="rn-ver">{rel.version}<span className="rn-date">{rel.date}</span></div>
+          <ul className="rn-items">{rel.items.map((item, j) => <li key={j}>{item}</li>)}</ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ReadmeTab({ pkg }) {
+  return (
+    <div className="readme-content">
+      <h2>{pkg.id}</h2>
+      <p>A library used in your solution. The README would render here as Markdown.</p>
+      <h3>Installation</h3>
+      <pre><code>dotnet add package {pkg.id}</code></pre>
+    </div>
+  );
+}
+
+function VersionsTab({ pkg, detail, onUpdate }) {
+  return (
+    <table className="ver-table">
+      <thead><tr><th>Version</th><th>Released</th><th>Compat</th><th></th></tr></thead>
+      <tbody>
+        {detail.versions.map(vd => (
+          <tr key={vd.v}>
+            <td><span className="ver-row-num">{vd.v}</span></td>
+            <td className="ver-row-date">{vd.date}</td>
+            <td>{vd.compat ? <span style={{color:'#89d185'}}>✓</span> : <span style={{color:'#525252'}}>{vd.framework ? `req. ${vd.framework}` : '✗'}</span>}</td>
+            <td className="ver-row-action">
+              {vd.compat && <button onClick={() => onUpdate(pkg.id, vd.v, pkg.installs?.map(i => i.projectId) || [])}>Install</button>}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function AddToProjectsTab({ pkg }) {
+  const [selected, setSelected] = useState(new Set());
+  function toggle(pid) {
+    setSelected(prev => { const s = new Set(prev); s.has(pid) ? s.delete(pid) : s.add(pid); return s; });
+  }
+  const target = pkg.latest || '1.0.0';
+  return (
+    <div>
+      <p style={{color:'#9d9d9d',fontSize:11,margin:'0 0 10px'}}>Pick projects to add <strong style={{color:'#ccc'}}>{pkg.id}</strong> <code style={{color:'#b180d7'}}>{target}</code> to:</p>
+      <div className="matrix">
+        <div className="matrix-head" style={{gridTemplateColumns:'22px 1fr auto'}}>
+          <span></span><span>Project</span><span>Framework</span>
+        </div>
+        {PROJECTS.map(proj => (
+          <div key={proj.id} className="matrix-row" style={{gridTemplateColumns:'22px 1fr auto'}}>
+            <input type="checkbox" checked={selected.has(proj.id)} onChange={() => toggle(proj.id)} />
+            <span className="matrix-proj">{proj.name}</span>
+            <span className="mt-tfm" style={{fontSize:10}}>{proj.tfm}</span>
+          </div>
+        ))}
+      </div>
+      <button style={{background:'#0e639c',color:'#fff',border:'none',borderRadius:2,padding:'4px 14px',fontSize:11,marginTop:10,cursor:'pointer',fontFamily:'inherit'}}
+              disabled={selected.size===0}>
+        Add to {selected.size} {selected.size === 1 ? 'project' : 'projects'}
+      </button>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════
+   BROWSE & UPDATES & CPM PANELS
+════════════════════════════════════════════════ */
+const BROWSE_RESULTS = [
+  { id: 'Polly',                desc: '.NET resilience and transient-fault-handling library.', downloads: '612M', latest: '8.4.0' },
+  { id: 'MassTransit',          desc: 'Distributed application framework for .NET.',           downloads: '342M', latest: '8.3.0' },
+  { id: 'Hangfire',             desc: 'Background job processing for .NET applications.',      downloads: '189M', latest: '1.8.14' },
+  { id: 'Refit',                desc: 'The automatic type-safe REST library for .NET.',        downloads: '142M', latest: '7.2.22' },
+  { id: 'Bogus',                desc: 'A simple fake data generator for .NET.',                downloads: '98M',  latest: '35.6.1' },
+];
+
+function BrowsePanel({ query, setQuery, selected, onSelect }) {
+  const results = query ? BROWSE_RESULTS.filter(r => r.id.toLowerCase().includes(query.toLowerCase())) : BROWSE_RESULTS;
+  return (
+    <div>
+      {results.map(r => {
+        // Synthesize a pkg for selection so DetailPanel can render
+        const synth = {
+          id: r.id, installs: [], versions: [r.latest], latest: r.latest,
+          hasUpdate: false, isDivergent: false, hasVuln: false, isDepr: false,
+        };
+        return (
+          <div key={r.id}
+               className={`browse-result${selected?.id === r.id ? ' selected' : ''}`}
+               onClick={() => onSelect(synth)}>
+            <div>
+              <div style={{display:'flex',alignItems:'baseline',gap:6,marginBottom:2}}>
+                <span style={{fontSize:11,color:'#cccccc',fontWeight:500}}>{r.id}</span>
+                <span style={{fontSize:10,color:'#858585'}}>{r.latest}</span>
+                <span style={{fontSize:9.5,color:'#525252'}}>{r.downloads} dls</span>
+              </div>
+              <div style={{fontSize:10,color:'#858585',lineHeight:1.4,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{r.desc}</div>
+            </div>
+            <div>
+              <button style={{background:'#0e639c',color:'#fff',border:'none',borderRadius:2,padding:'2px 8px',fontSize:10,cursor:'pointer',fontFamily:'inherit'}}>+ Add</button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function UpdatesPanel({ selected, onSelect }) {
+  const packages = aggregatePackages(false);
+  const updatable = packages.filter(p => p.installs.some(i => i.newer && i.cur !== i.newer));
+  const [checked, setChecked] = useState(new Set(updatable.map(p => p.id)));
+  function toggle(id) {
+    setChecked(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  }
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'center',gap:8,padding:'5px 10px',borderBottom:'1px solid #2a2a2a',background:'#252526'}}>
+        <input type="checkbox" checked={checked.size === updatable.length} onChange={e => setChecked(e.target.checked ? new Set(updatable.map(p => p.id)) : new Set())} />
+        <span style={{fontSize:10.5,color:'#cccccc'}}>Select all</span>
+        <span style={{fontSize:10,color:'#858585',marginLeft:'auto'}}>{checked.size} of {updatable.length}</span>
+        <button style={{background:checked.size?'#0e639c':'#2a2a2a',color:checked.size?'#fff':'#555',border:'none',borderRadius:2,padding:'2px 10px',fontSize:11,cursor:checked.size?'pointer':'default',fontFamily:'inherit'}}
+                disabled={!checked.size}>Update</button>
+      </div>
+      {updatable.map(pkg => {
+        const updProjects = pkg.installs.filter(i => i.newer && i.cur !== i.newer);
+        return (
+          <div key={pkg.id}
+               className={`upd-row${selected?.id === pkg.id ? ' selected' : ''}`}
+               onClick={() => onSelect(pkg)}>
+            <input type="checkbox" checked={checked.has(pkg.id)} onChange={(e) => { e.stopPropagation(); toggle(pkg.id); }} onClick={(e) => e.stopPropagation()} />
+            <div style={{display:'flex',flexDirection:'column',gap:2,minWidth:0,overflow:'hidden'}}>
+              <div style={{display:'flex',alignItems:'baseline',gap:6,overflow:'hidden'}}>
+                <span style={{color:'#cccccc',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pkg.id}</span>
+                {pkg.hasVuln && <span className="badge b-vuln">⚠ {pkg.vuln}</span>}
+              </div>
+              <div style={{display:'flex',gap:3,flexWrap:'wrap'}}>
+                {updProjects.map(i => (
+                  <span key={i.projectId} className="proj-chip has-update" style={{fontSize:9}}>
+                    <span className="proj-chip-dot"></span>
+                    <span className="pc-name">{PROJECT_BY_ID[i.projectId].name}</span>
+                    <span className="pc-ver">{i.cur}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+            <span style={{fontSize:10.5,color:'#3794ff',fontFamily:'SF Mono,Consolas,monospace',fontVariantNumeric:'tabular-nums'}}>→ {pkg.latest}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function CpmPanel({ selected, onSelect }) {
+  const packages = aggregatePackages(false);
+  return (
+    <div>
+      <div style={{padding:'5px 10px',background:'rgba(177,128,215,0.06)',borderBottom:'1px solid rgba(177,128,215,0.15)',fontSize:10.5,color:'#b180d7',display:'flex',alignItems:'flex-start',gap:6}}>
+        <span style={{flexShrink:0}}>📦</span>
+        <span>Central Package Management — versions pinned in <code style={{fontFamily:'SF Mono,Consolas,monospace',fontSize:'0.9em',background:'rgba(128,128,128,0.15)',padding:'0 3px',borderRadius:2}}>Directory.Packages.props</code></span>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr auto auto',gap:8,padding:'4px 10px',borderBottom:'1px solid #2a2a2a',fontSize:9.5,color:'#525252',fontWeight:600,letterSpacing:'0.04em',textTransform:'uppercase'}}>
+        <span>Package</span><span>Pinned</span><span>Used by</span>
+      </div>
+      {packages.map(pkg => (
+        <div key={pkg.id} className={`cpm-row${selected?.id === pkg.id ? ' selected' : ''}`} onClick={() => onSelect(pkg)}>
+          <span style={{color:'#cccccc',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pkg.id}</span>
+          <span style={{color:'#b180d7',fontVariantNumeric:'tabular-nums',fontSize:10.5,fontFamily:'SF Mono,Consolas,monospace'}}>{pkg.latest || pkg.versions[0]}</span>
+          <span style={{fontSize:9.5,color:'#858585'}}>{pkg.installs.length} {pkg.installs.length === 1 ? 'project' : 'projects'}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════
+   MAIN APP PANEL
+════════════════════════════════════════════════ */
+function AppPanel({ tab, setTab, selected, onSelect, onUpdate, onMatchVersions }) {
+  const [groupBy, setGroupBy] = useState('package'); // 'package' | 'project'
+  const [includeTransitive, setIncludeTransitive] = useState(false);
+  const [includePrerelease, setIncludePrerelease] = useState(false);
+  const [query, setQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  function handleRefresh() { setRefreshing(true); setTimeout(() => setRefreshing(false), 1500); }
+
+  const updateCount = useMemo(() =>
+    aggregatePackages(false).filter(p => p.installs.some(i => i.newer && i.cur !== i.newer)).length, []);
+  const vulnCount = useMemo(() =>
+    aggregatePackages(false).filter(p => p.hasVuln).length, []);
+
+  return (
+    <div className="panel" style={{position:'relative'}}>
+      <div className="app-header">
+        <h1>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#b180d7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9"/>
+            <polygon points="16,8 13,13 8,16 11,11" fill="#b180d7" stroke="none"/>
+          </svg>
+          NuGet Compass
+          <span style={{fontWeight:400,color:'#707070',marginLeft:4,textTransform:'none',letterSpacing:0}}>· 6 projects</span>
+        </h1>
+        <div className="header-actions">
+          <button className={`icon-btn${refreshing ? ' spinning' : ''}`} title="Refresh" onClick={handleRefresh}>↻</button>
+          <button className="icon-btn" title="Settings">⚙</button>
+        </div>
+      </div>
+
+      <div className="inner-tabs">
+        <button className={`inner-tab${tab==='installed'?' active':''}`} onClick={() => setTab('installed')}>Installed</button>
+        <button className={`inner-tab${tab==='browse'?' active':''}`} onClick={() => setTab('browse')}>Browse</button>
+        <button className={`inner-tab${tab==='updates'?' active':''}`} onClick={() => setTab('updates')}>
+          Updates {updateCount > 0 && <span className="pill">{updateCount}</span>}
+        </button>
+        <div style={{flex:1}}></div>
+        <span title="Central Package Management active — versions pinned in Directory.Packages.props"
+              style={{display:'inline-flex',alignItems:'center',gap:4,padding:'0 10px',fontSize:10,color:'#b180d7',cursor:'pointer'}}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          CPM
+        </span>
+      </div>
+
+      {/* Toolbar — adapts per tab */}
+      <div className="filter-bar">
+        <div className="search-box">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#858585" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input value={query} onChange={e => setQuery(e.target.value)}
+                 placeholder={tab==='browse' ? 'Search packages…' : 'Filter packages…'} />
+        </div>
+        {tab === 'browse' && (
+          <label className="filter-label">
+            <span>Source:</span>
+            <select defaultValue="nuget.org">
+              <option value="nuget.org">nuget.org</option>
+              <option value="github">GitHub Packages</option>
+              <option value="azure">Azure Artifacts</option>
+              <option value="local">Local feed</option>
+              <option value="all">All sources</option>
+              <option value="manage">Manage sources…</option>
+            </select>
+          </label>
+        )}
+        <label className="filter-label-cb">
+          <input type="checkbox" checked={includePrerelease} onChange={e => setIncludePrerelease(e.target.checked)} />
+          <span>Prerelease</span>
+        </label>
+
+        {tab === 'installed' && (
+          <>
+            <div className="seg" title="Group by">
+              <button className={`seg-btn${groupBy==='package'?' active':''}`} onClick={() => setGroupBy('package')}>
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="3" width="12" height="2"/><rect x="2" y="7" width="12" height="2"/><rect x="2" y="11" width="12" height="2"/></svg>
+                By package
+              </button>
+              <button className={`seg-btn${groupBy==='project'?' active':''}`} onClick={() => setGroupBy('project')}>
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M2 4h5l1 1h6v8H2z"/></svg>
+                By project
+              </button>
+            </div>
+            <label className="filter-label">
+              <span>FW:</span>
+              <select defaultValue="compatible">
+                <option value="compatible">Compatible</option>
+                <option value="all">All</option>
+              </select>
+            </label>
+            <label className="filter-label-cb">
+              <input type="checkbox" checked={includeTransitive} onChange={e => setIncludeTransitive(e.target.checked)} />
+              <span>Transitive</span>
+            </label>
+          </>
+        )}
+      </div>
+
+      <div className="scroll-area">
+        {tab === 'installed' && <InstalledList groupBy={groupBy} includeTransitive={includeTransitive} query={query} selected={selected} onSelect={onSelect} />}
+        {tab === 'browse' && <BrowsePanel query={query} setQuery={setQuery} selected={selected} onSelect={onSelect} />}
+        {tab === 'updates' && <UpdatesPanel selected={selected} onSelect={onSelect} />}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════
+   EDITOR PLACEHOLDER + CHROME
+════════════════════════════════════════════════ */
+function EditorArea() {
+  return (
+    <div className="editor-main">
+      <div className="editor-tabs">
+        <div className="editor-tab active">Acme.sln</div>
+        <div className="editor-tab">Program.cs</div>
+        <div className="editor-tab">Directory.Packages.props</div>
+      </div>
+      <div className="editor-code">
+        <div><span className="ec-ln">1</span><span className="ec-gray">// Acme.sln · 6 projects</span></div>
+        <div><span className="ec-ln">2</span><span className="ec-purple">Project</span><span className="ec-white">("Acme.Web")           </span><span className="ec-gray">// net8.0</span></div>
+        <div><span className="ec-ln">3</span><span className="ec-purple">Project</span><span className="ec-white">("Acme.Api")           </span><span className="ec-gray">// net8.0</span></div>
+        <div><span className="ec-ln">4</span><span className="ec-purple">Project</span><span className="ec-white">("Acme.Domain")        </span><span className="ec-gray">// netstandard2.1</span></div>
+        <div><span className="ec-ln">5</span><span className="ec-purple">Project</span><span className="ec-white">("Acme.Infrastructure")</span><span className="ec-gray">// net8.0</span></div>
+        <div><span className="ec-ln">6</span><span className="ec-purple">Project</span><span className="ec-white">("Acme.Workers")       </span><span className="ec-gray">// net9.0</span></div>
+        <div><span className="ec-ln">7</span><span className="ec-purple">Project</span><span className="ec-white">("Acme.Tests")         </span><span className="ec-gray">// net8.0</span></div>
+      </div>
+    </div>
+  );
+}
+
+function VSCodeChrome({ tab, setTab, selected, onSelect }) {
+  const [modal, setModal] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  function handleUpdate(pkgId, version, projectIds) {
+    setModal({ pkgId, version, projectIds });
+  }
+  function confirmUpdate() {
+    const m = modal;
+    setModal(null);
+    setToast(`Updated ${m.pkgId} to ${m.version} in ${m.projectIds?.length || 0} project${m.projectIds?.length === 1 ? '' : 's'}.`);
+    setTimeout(() => setToast(null), 4000);
+  }
+  function handleMatchVersions(pkgId, version, projectIds) {
+    handleUpdate(pkgId, version, projectIds);
+  }
+
+  return (
+    <div className="vscode-chrome" style={{position:'relative'}}>
+      <div className="chrome-titlebar">
+        <div className="chrome-dot" style={{background:'#ff5f57'}}></div>
+        <div className="chrome-dot" style={{background:'#ffbd2e'}}></div>
+        <div className="chrome-dot" style={{background:'#28c840'}}></div>
+        <span className="chrome-title">Acme — Visual Studio Code</span>
+      </div>
+      <div className="chrome-editor-area">
+        <div className="activity-bar">
+          <div className="ab-icon active" title="NuGet Compass">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#b180d7" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <polygon points="16,8 13,13 8,16 11,11" fill="#b180d7" stroke="none"/>
+            </svg>
+          </div>
+          <div className="ab-sep"></div>
+          <div className="ab-icon" title="Explorer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#858585" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
+          <div className="ab-icon" title="Search"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#858585" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+        </div>
+        <EditorArea />
+      </div>
+
+      <div className="bottom-dock" style={{height: 420}}>
+        <div className="dock-titlebar">
+          <div className="dock-tab active">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#b180d7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <polygon points="16,8 13,13 8,16 11,11" fill="#b180d7" stroke="none"/>
+            </svg>
+            NuGet Compass
+          </div>
+          <div className="dock-tab" style={{color:'#525252',cursor:'default'}}>Terminal</div>
+          <div className="dock-tab" style={{color:'#525252',cursor:'default'}}>Problems</div>
+          <div className="dock-drag-handle"></div>
+          <div className="dock-actions">
+            <button className="icon-btn" title="Maximize" style={{fontSize:11}}>⬡</button>
+            <button className="icon-btn" title="Close" style={{fontSize:11}}>✕</button>
+          </div>
+        </div>
+        <div className="dock-body" style={{position:'relative'}}>
+          <div className="list-panel" style={{width: 460}}>
+            <AppPanel tab={tab} setTab={setTab} selected={selected} onSelect={onSelect}
+              onUpdate={handleUpdate} onMatchVersions={handleMatchVersions} />
+          </div>
+          <DetailPanel pkg={selected} context={tab}
+            onUpdate={handleUpdate} onMatchVersions={handleMatchVersions} />
+
+          {modal && (
+            <div className="modal-overlay">
+              <div className="modal">
+                <p className="modal-title">Update {modal.projectIds?.length || 0} project{modal.projectIds?.length === 1 ? '' : 's'}?</p>
+                <p className="modal-body">
+                  Update <strong>{modal.pkgId}</strong> to <code>{modal.version}</code> in:
+                </p>
+                <ul style={{margin:'-8px 0 14px 0',paddingLeft:18,fontSize:11,color:'#9d9d9d'}}>
+                  {(modal.projectIds || []).map(pid => (
+                    <li key={pid} style={{padding:'2px 0'}}>{PROJECT_BY_ID[pid]?.name}</li>
+                  ))}
+                </ul>
+                <div className="modal-actions">
+                  <button className="btn btn-cancel" onClick={() => setModal(null)}>Cancel</button>
+                  <button className="btn btn-primary" onClick={confirmUpdate}>Update</button>
+                </div>
+              </div>
+            </div>
+          )}
+          {toast && <div className="toast">✓ {toast}<span className="toast-link">Show output</span></div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════
+   DEMO CONTROLS
+════════════════════════════════════════════════ */
+function DemoControls({ tab, setTab, selected, onSelectPkg }) {
+  const tabs = [
+    { id: 'installed', label: 'Installed (consolidated)' },
+    { id: 'browse',    label: 'Browse / nuget.org' },
+    { id: 'updates',   label: 'Updates' },
+  ];
+  const packages = useMemo(() => aggregatePackages(false), []);
+  const featured = packages.filter(p => ['Microsoft.EntityFrameworkCore','AutoMapper','Newtonsoft.Json','Serilog','System.Text.Json'].includes(p.id));
+  return (
+    <div className="demo-controls">
+      <div className="demo-title">Tab</div>
+      <div className="demo-section">
+        {tabs.map(t => (
+          <button key={t.id} className={`demo-btn${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
+        ))}
+      </div>
+      <div className="demo-title" style={{marginTop:8}}>Try selecting</div>
+      <div className="demo-section">
+        {featured.map(p => (
+          <button key={p.id} className={`demo-btn${selected?.id === p.id ? ' active' : ''}`}
+                  onClick={() => { setTab('installed'); onSelectPkg(p); }}>
+            {p.id}
+            {p.isDivergent && <span style={{color:'#cca700',marginLeft:4}}>⚠</span>}
+            {p.hasVuln && <span style={{color:'#f14c4c',marginLeft:4}}>⚠</span>}
+            {p.isDepr && <span style={{color:'#858585',marginLeft:4}}>🪦</span>}
+          </button>
+        ))}
+      </div>
+      <div className="demo-section">
+        <div className="demo-section-title">What's new</div>
+        <div style={{fontSize:10,color:'#707070',lineHeight:1.7}}>
+          • <strong style={{color:'#bbb'}}>By package</strong> default<br/>
+          • Per-project version chips inline<br/>
+          • Drift warning when versions diverge<br/>
+          • Detail panel works on every tab<br/>
+          • Projects matrix lets you align versions across the solution
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════
+   ROOT
+════════════════════════════════════════════════ */
+function Root() {
+  const [tab, setTab] = useState('installed');
+  const [selected, setSelected] = useState(null);
+
+  // Pre-select EF Core to showcase divergent versions
+  useEffect(() => {
+    const packages = aggregatePackages(false);
+    setSelected(packages.find(p => p.id === 'Microsoft.EntityFrameworkCore'));
+  }, []);
+
+  function handleSelect(pkg) {
+    setSelected(prev => prev?.id === pkg.id ? null : pkg);
+  }
+
+  return (
+    <>
+      <VSCodeChrome tab={tab} setTab={setTab} selected={selected} onSelect={handleSelect} />
+      <DemoControls tab={tab} setTab={setTab} selected={selected} onSelectPkg={setSelected} />
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Root />);
+</script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: #1e1e1e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-size: 12px; color: #cccccc; padding: 16px; box-sizing: border-box; }
+  .section-title { font-size: 10px; font-weight: 600; color: #858585; letter-spacing: 0.08em; text-transform: uppercase; margin: 14px 0 8px; }
+  .section-title:first-child { margin-top: 0; }
+
+  /* Header */
+  .app-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #3c3c3c;
+    background: #1e1e1e;
+  }
+  .app-header h1 { font-size: 0.95rem; font-weight: 600; margin: 0; letter-spacing: 0.02em; }
+  .header-actions { display: flex; gap: 0.25rem; }
+  .icon-btn {
+    background: transparent; border: 1px solid transparent;
+    color: #cccccc; padding: 0.15rem 0.4rem;
+    cursor: pointer; border-radius: 3px; font-size: 14px; line-height: 1;
+  }
+  .icon-btn:hover { background: rgba(128,128,128,0.2); }
+
+  /* Filter bar */
+  .filter-bar {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 0.75rem; padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #3c3c3c;
+    background: #252526;
+  }
+  .filter-label, .filter-label-checkbox {
+    display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.85rem;
+  }
+  .filter-label select {
+    background: #3c3c3c; color: #cccccc;
+    border: 1px solid #3c3c3c; padding: 0.15rem 0.3rem;
+    font-size: 0.85rem; font-family: inherit;
+  }
+  input[type="checkbox"] { accent-color: #3794ff; }
+
+  /* Annotations */
+  .annotation {
+    font-size: 10px; color: #b180d7; font-family: "SF Mono", Consolas, monospace;
+    background: rgba(177, 128, 215, 0.08); border: 1px solid rgba(177, 128, 215, 0.2);
+    padding: 2px 6px; border-radius: 2px; margin-top: 6px; display: inline-block;
+  }
+  .anno-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+</style>
+</head>
+<body class="nc-root">
+  <div class="section-title">Header + Filter Bar</div>
+
+  <div class="app-header">
+    <h1>NuGet Compass</h1>
+    <div class="header-actions">
+      <button class="icon-btn" title="Refresh">↻</button>
+      <button class="icon-btn" title="Settings">⚙</button>
+    </div>
+  </div>
+  <div class="filter-bar">
+    <label class="filter-label">
+      <span>Framework:</span>
+      <select>
+        <option selected>Compatible only</option>
+        <option>Show all</option>
+      </select>
+    </label>
+    <label class="filter-label">
+      <span>Update:</span>
+      <select>
+        <option>Patch only</option>
+        <option selected>Minor allowed</option>
+        <option>Major allowed</option>
+      </select>
+    </label>
+    <label class="filter-label-checkbox">
+      <input type="checkbox"> <span>Prerelease</span>
+    </label>
+    <label class="filter-label-checkbox">
+      <input type="checkbox"> <span>Show transitive</span>
+    </label>
+  </div>
+
+  <div class="anno-row">
+    <span class="annotation">--vscode-sideBar-background for filter bar bg</span>
+    <span class="annotation">--vscode-dropdown-background for selects</span>
+    <span class="annotation">0.85rem labels</span>
+    <span class="annotation">sticky top: 0 in panel</span>
+    <span class="annotation">"Framework:" replaces "TFM:" — plain language</span>
+  </div>
+</body>
+</html>
