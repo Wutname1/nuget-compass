@@ -21,6 +21,13 @@ export interface SearchHit {
   description?: string;
 }
 
+export interface SelectedPackage {
+  projectPath: string;
+  packageId: string;
+  /** Optionally pre-pick a version to focus in the detail panel. */
+  focusedVersion?: string;
+}
+
 export interface AppState {
   filters: FilterState;
   projects: Project[];
@@ -29,8 +36,8 @@ export interface AppState {
   projectStatus: Record<string, ProjectStatus>;
   /** Versions returned from a host:packageVersions message, keyed by `${projectPath}::${packageId}`. */
   versionsByPackage: Record<string, import('@nuget-compass/shared').AvailableVersion[]>;
-  /** Which packages are expanded in the UI. Same key shape as versionsByPackage. */
-  expanded: Record<string, true>;
+  /** Currently selected package; drives the detail panel. */
+  selectedPackage?: SelectedPackage;
   status: 'idle' | 'scanning' | 'fetching';
   error?: { message: string; detail?: string };
   search: { query: string; results: SearchHit[]; visible: boolean };
@@ -45,7 +52,6 @@ export const initialState: AppState = {
   rowsByProject: {},
   projectStatus: {},
   versionsByPackage: {},
-  expanded: {},
   status: 'idle',
   search: { query: '', results: [], visible: false },
   sources: [],
@@ -59,7 +65,7 @@ export function readmeKey(packageId: string, version: string): string {
 export type Action =
   | { type: 'host'; message: HostMessage }
   | { type: 'setFilters'; filters: FilterState }
-  | { type: 'toggleExpanded'; projectPath: string; packageId: string }
+  | { type: 'selectPackage'; selection: SelectedPackage | undefined }
   | { type: 'toggleSearch' }
   | { type: 'setSearchQuery'; query: string }
   | { type: 'clearSearch' }
@@ -73,13 +79,8 @@ export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'setFilters':
       return { ...state, filters: action.filters };
-    case 'toggleExpanded': {
-      const key = packageKey(action.projectPath, action.packageId);
-      const next = { ...state.expanded };
-      if (next[key]) delete next[key];
-      else next[key] = true;
-      return { ...state, expanded: next };
-    }
+    case 'selectPackage':
+      return { ...state, selectedPackage: action.selection };
     case 'toggleSearch':
       return { ...state, search: { ...state.search, visible: !state.search.visible } };
     case 'setSearchQuery':
@@ -103,9 +104,19 @@ function applyHostMessage(state: AppState, msg: HostMessage): AppState {
   switch (msg.type) {
     case 'host:init':
       return { ...state, filters: msg.filters };
-    case 'host:projects':
-      // New scan: drop stale per-project status.
-      return { ...state, projects: msg.projects, projectStatus: {} };
+    case 'host:projects': {
+      // New scan: drop stale per-project status. Clear the selected package
+      // if its project is no longer in the workspace.
+      const stillExists = state.selectedPackage
+        ? msg.projects.some((p) => p.path === state.selectedPackage!.projectPath)
+        : false;
+      return {
+        ...state,
+        projects: msg.projects,
+        projectStatus: {},
+        selectedPackage: stillExists ? state.selectedPackage : undefined,
+      };
+    }
     case 'host:packageRows':
       return {
         ...state,
