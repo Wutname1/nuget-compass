@@ -5,6 +5,7 @@ import { vscode } from './vscode.js';
 import { reducer, initialState } from './state/reducer.js';
 import { FilterBar } from './components/FilterBar.js';
 import { ProjectList } from './components/ProjectList.js';
+import { SearchPanel } from './components/SearchPanel.js';
 import { StatusBanner } from './components/StatusBanner.js';
 
 export function App(): JSX.Element {
@@ -29,6 +30,15 @@ export function App(): JSX.Element {
         <div className="app-header-actions">
           <button
             type="button"
+            className={'icon-button' + (state.search.visible ? ' icon-button-active' : '')}
+            title="Search NuGet"
+            aria-pressed={state.search.visible}
+            onClick={() => dispatch({ type: 'toggleSearch' })}
+          >
+            🔍
+          </button>
+          <button
+            type="button"
             className="icon-button"
             title="Refresh (Shift-click to clear cache)"
             onClick={(e) =>
@@ -50,6 +60,14 @@ export function App(): JSX.Element {
         }}
       />
       <StatusBanner status={state.status} error={state.error} />
+      {state.search.visible ? (
+        <SearchPanel
+          projects={state.projects}
+          query={state.search.query}
+          results={state.search.results}
+          onQueryChange={(query) => dispatch({ type: 'setSearchQuery', query })}
+        />
+      ) : null}
       <ProjectList
         projects={state.projects}
         rowsByProject={state.rowsByProject}

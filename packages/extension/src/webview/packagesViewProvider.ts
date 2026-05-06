@@ -17,6 +17,8 @@ import { resolveAvailableVersions, resolveNewestAllowed } from '../nuget/version
 import { scanVulnerabilities } from '../dotnet/vulnerable.js';
 import { scanDeprecations } from '../dotnet/deprecated.js';
 import { addPackage } from '../dotnet/addPackage.js';
+import { removePackage } from '../dotnet/removePackage.js';
+import { searchPackages } from '../dotnet/searchPackages.js';
 
 export class PackagesViewProvider implements vscode.WebviewViewProvider {
   static readonly viewType = 'nuget-compass.packages';
@@ -25,6 +27,8 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   private readonly catalog: NuGetCatalogClient;
   /** Last scan result, kept so expand handlers can find the project for a path. */
   private lastProjects: Project[] = [];
+  /** Rows produced by the most recent enrichment, per project path. Drives Update All. */
+  private readonly lastRowsByProject = new Map<string, PackageRow[]>();
 
   constructor(private readonly context: vscode.ExtensionContext) {
     this.catalog = createCatalogClient(context);
@@ -67,6 +71,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     try {
       const result = await scanWorkspace({ includeTransitive: filters.showTransitive });
       this.lastProjects = result.projects;
+      this.lastRowsByProject.clear();
       this.post({ type: 'host:projects', projects: result.projects });
 
       // First paint: send rows without newestAllowed so the UI shows packages
@@ -205,6 +210,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       return row;
     });
 
+    this.lastRowsByProject.set(project.path, rows);
     this.post({ type: 'host:packageRows', projectPath: project.path, rows });
     this.post({ type: 'host:projectStatus', projectPath: project.path, status: 'ready' });
   }
@@ -271,6 +277,18 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       case 'view:updatePackage':
         void this.updatePackage(msg.projectPath, msg.packageId, msg.toVersion);
         return;
+      case 'view:updateAll':
+        void this.updateAll(msg.projectPath);
+        return;
+      case 'view:uninstallPackage':
+        void this.uninstallPackage(msg.projectPath, msg.packageId);
+        return;
+      case 'view:searchPackages':
+        void this.runSearch(msg.query);
+        return;
+      case 'view:installPackage':
+        void this.installPackage(msg.projectPath, msg.packageId, msg.version);
+        return;
     }
   }
 
@@ -332,6 +350,185 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     } finally {
       this.post({ type: 'host:status', status: 'idle' });
     }
+  }
+
+  private async updateAll(projectPath: string): Promise<void> {
+    const project = this.lastProjects.find((p) => p.path === projectPath);
+    if (!project) return;
+    const rows = (this.lastRowsByProject.get(projectPath) ?? []).filter(
+      (r) => r.newestAllowed && r.newestAllowed !== r.package.resolvedVersion,
+    );
+    if (rows.length === 0) {
+      void vscode.window.showInformationMessage('No updates available.');
+      return;
+    }
+    const summary = rows
+      .map((r) => `  ${r.package.id}: ${r.package.resolvedVersion} -> ${r.newestAllowed!}`)
+      .join('\n');
+    const choice = await vscode.window.showInformationMessage(
+      `Update ${rows.length} package(s) in ${project.name}?\n\n${summary}`,
+      { modal: true },
+      'Update All',
+    );
+    if (choice !== 'Update All') return;
+
+    this.post({ type: 'host:status', status: 'fetching' });
+    const failures: string[] = [];
+    try {
+      // Sequential to avoid SDK contention on the same project file.
+      for (const row of rows) {
+        const result = await addPackage(
+          projectPath,
+          path.dirname(projectPath),
+          row.package.id,
+          row.newestAllowed!,
+        );
+        if (!result.success) {
+          failures.push(`${row.package.id} -> ${row.newestAllowed!}: ${firstLine(result.output)}`);
+          logger.error(`updateAll: ${row.package.id} failed: ${result.output}`);
+        } else {
+          logger.info(`updateAll: ${row.package.id} -> ${row.newestAllowed!}`);
+        }
+      }
+    } finally {
+      this.post({ type: 'host:status', status: 'idle' });
+    }
+
+    if (failures.length === 0) {
+      void vscode.window.showInformationMessage(
+        `Updated ${rows.length} package(s) in ${project.name}.`,
+      );
+    } else {
+      this.post({
+        type: 'host:error',
+        message: `${failures.length} of ${rows.length} updates failed.`,
+        detail: failures.join('\n'),
+      });
+      logger.show();
+    }
+    this.refresh();
+  }
+
+  private async uninstallPackage(projectPath: string, packageId: string): Promise<void> {
+    const choice = await vscode.window.showInformationMessage(
+      `Uninstall ${packageId} from this project?`,
+      { modal: true },
+      'Uninstall',
+    );
+    if (choice !== 'Uninstall') return;
+
+    this.post({ type: 'host:status', status: 'fetching' });
+    try {
+      const result = await removePackage(projectPath, path.dirname(projectPath), packageId);
+      if (!result.success) {
+        this.post({
+          type: 'host:error',
+          message: `Could not uninstall ${packageId}.`,
+          detail: result.output,
+        });
+        logger.show();
+        return;
+      }
+      void vscode.window.showInformationMessage(`Uninstalled ${packageId}.`);
+      this.refresh();
+    } catch (err) {
+      this.post({
+        type: 'host:error',
+        message: `Could not uninstall ${packageId}.`,
+        detail: describeReason(err),
+      });
+    } finally {
+      this.post({ type: 'host:status', status: 'idle' });
+    }
+  }
+
+  private async runSearch(query: string): Promise<void> {
+    if (query.trim().length === 0) {
+      this.post({ type: 'host:searchResults', query, results: [] });
+      return;
+    }
+    const cwd = this.firstProjectCwd();
+    if (!cwd) {
+      this.post({ type: 'host:error', message: 'Open a .NET project before searching.' });
+      return;
+    }
+    try {
+      const hits = await searchPackages(query, cwd);
+      this.post({ type: 'host:searchResults', query, results: hits });
+    } catch (err) {
+      logger.warn(`search failed: ${describeReason(err)}`);
+      this.post({
+        type: 'host:error',
+        message: 'Search failed.',
+        detail: describeReason(err),
+      });
+    }
+  }
+
+  private async installPackage(
+    projectPath: string,
+    packageId: string,
+    version?: string,
+  ): Promise<void> {
+    const project = this.lastProjects.find((p) => p.path === projectPath);
+    if (!project) return;
+    const verLabel = version ? ` ${version}` : '';
+    const choice = await vscode.window.showInformationMessage(
+      `Install ${packageId}${verLabel} to ${project.name}?`,
+      { modal: true },
+      'Install',
+    );
+    if (choice !== 'Install') return;
+
+    this.post({ type: 'host:status', status: 'fetching' });
+    try {
+      const args: Parameters<typeof addPackage> = [
+        projectPath,
+        path.dirname(projectPath),
+        packageId,
+        version ?? '',
+      ];
+      // addPackage requires a version; if none supplied, omit the --version arg.
+      // Easiest path: call dotnet directly when version is omitted.
+      const { runDotnet } = await import('../dotnet/exec.js');
+      const result = version
+        ? await addPackage(...args)
+        : await (async () => {
+            const r = await runDotnet(
+              ['add', projectPath, 'package', packageId],
+              path.dirname(projectPath),
+              60_000,
+            );
+            return {
+              success: r.code === 0,
+              output: [r.stdout, r.stderr].filter((s) => s.trim().length > 0).join('\n'),
+            };
+          })();
+      if (!result.success) {
+        this.post({
+          type: 'host:error',
+          message: `Could not install ${packageId}.`,
+          detail: result.output,
+        });
+        logger.show();
+        return;
+      }
+      void vscode.window.showInformationMessage(`Installed ${packageId}${verLabel}.`);
+      this.refresh();
+    } catch (err) {
+      this.post({
+        type: 'host:error',
+        message: `Could not install ${packageId}.`,
+        detail: describeReason(err),
+      });
+    } finally {
+      this.post({ type: 'host:status', status: 'idle' });
+    }
+  }
+
+  private firstProjectCwd(): string | undefined {
+    const first = this.lastProjects[0];
+    return first ? path.dirname(first.path) : undefined;
   }
 
   private post(message: HostMessage): void {
@@ -418,6 +615,11 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
 
 function describeReason(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
+}
+
+function firstLine(s: string): string {
+  const i = s.indexOf('\n');
+  return i === -1 ? s : s.slice(0, i);
 }
 
 function generateNonce(): string {

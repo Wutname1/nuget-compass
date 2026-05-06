@@ -58,12 +58,25 @@ export interface HostPackageVersionsMessage {
   newestAllowed?: string;
 }
 
+export interface HostSearchResultsMessage {
+  type: 'host:searchResults';
+  query: string;
+  results: Array<{
+    id: string;
+    latestVersion: string;
+    totalDownloads?: number;
+    owners?: string;
+    description?: string;
+  }>;
+}
+
 export type HostMessage =
   | HostInitMessage
   | HostProjectsMessage
   | HostPackageRowsMessage
   | HostPackageVersionsMessage
   | HostProjectStatusMessage
+  | HostSearchResultsMessage
   | HostErrorMessage
   | HostStatusMessage;
 
@@ -96,9 +109,37 @@ export interface ViewUpdatePackageMessage {
   toVersion: string;
 }
 
+export interface ViewUpdateAllMessage {
+  type: 'view:updateAll';
+  projectPath: string;
+}
+
+export interface ViewUninstallPackageMessage {
+  type: 'view:uninstallPackage';
+  projectPath: string;
+  packageId: string;
+}
+
+export interface ViewSearchPackagesMessage {
+  type: 'view:searchPackages';
+  query: string;
+}
+
+export interface ViewInstallPackageMessage {
+  type: 'view:installPackage';
+  projectPath: string;
+  packageId: string;
+  /** Omitted = let the SDK pick the latest compatible. */
+  version?: string;
+}
+
 export type ViewMessage =
   | ViewReadyMessage
   | ViewRefreshMessage
   | ViewSetFiltersMessage
   | ViewExpandPackageMessage
-  | ViewUpdatePackageMessage;
+  | ViewUpdatePackageMessage
+  | ViewUpdateAllMessage
+  | ViewUninstallPackageMessage
+  | ViewSearchPackagesMessage
+  | ViewInstallPackageMessage;

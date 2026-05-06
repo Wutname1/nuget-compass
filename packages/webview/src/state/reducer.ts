@@ -6,6 +6,14 @@ export interface ProjectStatus {
   progress?: { done: number; total: number };
 }
 
+export interface SearchHit {
+  id: string;
+  latestVersion: string;
+  totalDownloads?: number;
+  owners?: string;
+  description?: string;
+}
+
 export interface AppState {
   filters: FilterState;
   projects: Project[];
@@ -18,6 +26,7 @@ export interface AppState {
   expanded: Record<string, true>;
   status: 'idle' | 'scanning' | 'fetching';
   error?: { message: string; detail?: string };
+  search: { query: string; results: SearchHit[]; visible: boolean };
 }
 
 export const initialState: AppState = {
@@ -28,12 +37,15 @@ export const initialState: AppState = {
   versionsByPackage: {},
   expanded: {},
   status: 'idle',
+  search: { query: '', results: [], visible: false },
 };
 
 export type Action =
   | { type: 'host'; message: HostMessage }
   | { type: 'setFilters'; filters: FilterState }
-  | { type: 'toggleExpanded'; projectPath: string; packageId: string };
+  | { type: 'toggleExpanded'; projectPath: string; packageId: string }
+  | { type: 'toggleSearch' }
+  | { type: 'setSearchQuery'; query: string };
 
 export function packageKey(projectPath: string, packageId: string): string {
   return `${projectPath}::${packageId}`;
@@ -50,6 +62,10 @@ export function reducer(state: AppState, action: Action): AppState {
       else next[key] = true;
       return { ...state, expanded: next };
     }
+    case 'toggleSearch':
+      return { ...state, search: { ...state.search, visible: !state.search.visible } };
+    case 'setSearchQuery':
+      return { ...state, search: { ...state.search, query: action.query } };
     case 'host':
       return applyHostMessage(state, action.message);
   }
@@ -85,6 +101,8 @@ function applyHostMessage(state: AppState, msg: HostMessage): AppState {
           [msg.projectPath]: { status: msg.status, progress: msg.progress },
         },
       };
+    case 'host:searchResults':
+      return { ...state, search: { ...state.search, query: msg.query, results: msg.results } };
     case 'host:status':
       return { ...state, status: msg.status };
     case 'host:error':

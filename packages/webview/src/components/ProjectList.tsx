@@ -56,6 +56,18 @@ export function ProjectList({
                 </span>
               ) : null}
               {isReady ? <ProjectHeaderBadges summary={summary} /> : null}
+              {isReady && summary.withUpdates > 0 ? (
+                <button
+                  type="button"
+                  className="project-action"
+                  title={`Update all ${summary.withUpdates} compatible package(s) in ${p.name}`}
+                  onClick={() =>
+                    vscode.postMessage({ type: 'view:updateAll', projectPath: p.path })
+                  }
+                >
+                  Update All
+                </button>
+              ) : null}
             </header>
             <PackageRows
               projectPath={p.path}
@@ -170,12 +182,30 @@ function PackageRows({
               <RowBadges vulnerability={row.vulnerability} deprecation={row.deprecation} />
             </button>
             {isOpen ? (
-              <VersionList
-                projectPath={projectPath}
-                packageId={row.package.id}
-                currentVersion={row.package.resolvedVersion}
-                versions={versions}
-              />
+              <>
+                <div className="package-actions">
+                  <button
+                    type="button"
+                    className="package-action package-action-danger"
+                    title={`Uninstall ${row.package.id}`}
+                    onClick={() =>
+                      vscode.postMessage({
+                        type: 'view:uninstallPackage',
+                        projectPath,
+                        packageId: row.package.id,
+                      })
+                    }
+                  >
+                    Uninstall
+                  </button>
+                </div>
+                <VersionList
+                  projectPath={projectPath}
+                  packageId={row.package.id}
+                  currentVersion={row.package.resolvedVersion}
+                  versions={versions}
+                />
+              </>
             ) : null}
           </li>
         );
