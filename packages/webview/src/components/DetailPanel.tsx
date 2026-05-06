@@ -590,7 +590,11 @@ function VersionsTab({
                   {v.version}
                 </span>
                 {v.isPrerelease ? (
-                  <span className="badge badge-prerelease" style={{ marginLeft: 6 }}>
+                  <span
+                    className="badge badge-prerelease"
+                    style={{ marginLeft: 6 }}
+                    title="Prerelease: a test version that may have bugs. Use only if you need new features that aren't in a stable release yet."
+                  >
                     🔒 prerelease
                   </span>
                 ) : null}

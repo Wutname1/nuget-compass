@@ -283,10 +283,15 @@ function ProjectChip({ install }: { install: PackageInstall }): JSX.Element {
     'proj-chip' +
     (isUpdate ? ' proj-chip-update' : '') +
     (hasVuln ? ' proj-chip-vuln' : '');
+  const titleBits = [
+    `${install.projectName} (${install.targetFrameworks.join('; ')}) — ${install.resolvedVersion}`,
+  ];
+  if (hasVuln) titleBits.push('Has a known security problem in this project. Update to a fixed version.');
+  if (isUpdate) titleBits.push(`A newer version is available: ${install.newestAllowed}`);
   return (
     <span
       className={cls}
-      title={`${install.projectName} (${install.targetFrameworks.join('; ')}) — ${install.resolvedVersion}`}
+      title={titleBits.join('\n')}
     >
       <span className="proj-chip-dot" />
       <span className="proj-chip-name">{install.projectName}</span>
@@ -398,8 +403,22 @@ function ProjectGroup({
         ) : null}
         <span className="group-meta">
           <span className="pip">{rows.length} pkg</span>
-          {updateCount > 0 ? <span className="pip pip-upd">↑ {updateCount}</span> : null}
-          {vulnCount > 0 ? <span className="pip pip-vuln">⚠ {vulnCount}</span> : null}
+          {updateCount > 0 ? (
+            <span
+              className="pip pip-upd"
+              title={`${updateCount} package${updateCount === 1 ? ' has' : 's have'} a newer version available.`}
+            >
+              ↑ {updateCount}
+            </span>
+          ) : null}
+          {vulnCount > 0 ? (
+            <span
+              className="pip pip-vuln"
+              title={`${vulnCount} package${vulnCount === 1 ? ' has' : 's have'} a known security problem. Update to a fixed version.`}
+            >
+              ⚠ {vulnCount}
+            </span>
+          ) : null}
           {isEnriching && status?.progress ? (
             <span className="group-progress">
               {status.progress.done}/{status.progress.total} loaded
@@ -481,7 +500,7 @@ function ProjectPackageRow({
             {pkg.isDivergent ? (
               <span
                 className="pkg-divergent-warn"
-                title={`This package has different versions across projects (${pkg.versions.join(', ')}).`}
+                title={`Different versions of this package are used across projects. Pick one to keep things in sync.\n\nVersions in use: ${pkg.versions.join(', ')}`}
               >
                 ≠
               </span>

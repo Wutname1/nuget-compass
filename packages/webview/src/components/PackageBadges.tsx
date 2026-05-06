@@ -13,7 +13,7 @@ export function PackageRowBadges({ pkg }: { pkg: AggregatedPackage }): JSX.Eleme
           className={`badge badge-vuln${
             pkg.highestVulnSeverity ? ` badge-vuln-${pkg.highestVulnSeverity.toLowerCase()}` : ''
           }`}
-          title={collectVulnTitle(pkg.installs)}
+          title={vulnTooltip(pkg.highestVulnSeverity, pkg.installs)}
         >
           ⚠ {pkg.highestVulnSeverity ?? 'vulnerable'}
         </span>
@@ -21,18 +21,23 @@ export function PackageRowBadges({ pkg }: { pkg: AggregatedPackage }): JSX.Eleme
       {pkg.isDeprecated ? (
         <span
           className="badge badge-deprecated"
-          title={collectDeprecationTitle(pkg.installs)}
+          title={`This package is no longer supported. Look for a replacement.\n\n${collectDeprecationTitle(pkg.installs)}`}
         >
           🪦 deprecated
         </span>
       ) : null}
       {pkg.isTransitive ? (
-        <span className="badge badge-trans">transitive</span>
+        <span
+          className="badge badge-trans"
+          title="Transitive: pulled in by another package, not added directly to your project."
+        >
+          transitive
+        </span>
       ) : null}
       {pkg.isDivergent ? (
         <span
           className="pkg-divergent-warn"
-          title={`Installed at ${pkg.versions.length} different versions: ${pkg.versions.join(
+          title={`Different versions of this package are used across projects. Pick one to keep things in sync.\n\nVersions in use: ${pkg.versions.join(
             ', ',
           )}`}
         >
@@ -53,9 +58,9 @@ export function InstallBadges({ install }: { install: PackageInstall }): JSX.Ele
       {hasVuln ? (
         <span
           className={`badge badge-vuln badge-vuln-${sev!.toLowerCase()}`}
-          title={install
+          title={`${severityExplanation(sev!)}\n\n${install
             .vulnerability!.map((v) => `${v.severity}: ${v.advisoryUrl}`)
-            .join('\n')}
+            .join('\n')}`}
         >
           ⚠ {sev}
         </span>
@@ -63,16 +68,46 @@ export function InstallBadges({ install }: { install: PackageInstall }): JSX.Ele
       {install.deprecation ? (
         <span
           className="badge badge-deprecated"
-          title={describeDeprecation(install.deprecation)}
+          title={`This package is no longer supported. Look for a replacement.\n\n${describeDeprecation(install.deprecation)}`}
         >
           🪦 deprecated
         </span>
       ) : null}
       {install.isTransitive ? (
-        <span className="badge badge-trans">transitive</span>
+        <span
+          className="badge badge-trans"
+          title="Transitive: pulled in by another package, not added directly to your project."
+        >
+          transitive
+        </span>
       ) : null}
     </>
   );
+}
+
+function vulnTooltip(
+  highest: VulnerabilityInfo['severity'] | undefined,
+  installs: PackageInstall[],
+): string {
+  const heading = highest
+    ? severityExplanation(highest)
+    : 'This package has a known security problem. Update to a fixed version.';
+  return `${heading}\n\n${collectVulnTitle(installs)}`;
+}
+
+function severityExplanation(sev: VulnerabilityInfo['severity']): string {
+  switch (sev) {
+    case 'Critical':
+      return 'Critical security problem. Update right away.';
+    case 'High':
+      return 'High risk security problem. Plan to update soon.';
+    case 'Moderate':
+      return 'Moderate security problem. Update when you can.';
+    case 'Low':
+      return 'Low risk security problem. Update when convenient.';
+    default:
+      return 'This package has a known security problem.';
+  }
 }
 
 function collectVulnTitle(installs: PackageInstall[]): string {
