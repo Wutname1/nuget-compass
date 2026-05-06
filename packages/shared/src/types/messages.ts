@@ -15,6 +15,12 @@ import type { FilterState } from './filters.js';
 export interface HostInitMessage {
   type: 'host:init';
   filters: FilterState;
+  fontScale: number;
+}
+
+export interface HostFontScaleMessage {
+  type: 'host:fontScale';
+  fontScale: number;
 }
 
 export interface HostProjectsMessage {
@@ -87,6 +93,7 @@ export interface HostReadmeMessage {
 
 export type HostMessage =
   | HostInitMessage
+  | HostFontScaleMessage
   | HostProjectsMessage
   | HostPackageRowsMessage
   | HostPackageVersionsMessage

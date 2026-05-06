@@ -397,7 +397,7 @@ function ProjectsRow({
         <span>{install.projectName}</span>
         <span className="matrix-tfm">{install.targetFrameworks.join('; ')}</span>
         {install.vulnerability && install.vulnerability.length > 0 ? (
-          <span className="badge badge-vuln" style={{ fontSize: 8.5 }}>
+          <span className="badge badge-vuln" style={{ fontSize: 'calc(8.5px * var(--ngc-font-scale))' }}>
             ⚠
           </span>
         ) : null}
@@ -421,7 +421,7 @@ function ProjectsRow({
             Update
           </button>
         ) : (
-          <span className="muted" style={{ fontSize: 10 }}>
+          <span className="muted" style={{ fontSize: 'calc(10px * var(--ngc-font-scale))' }}>
             up to date
           </span>
         )}

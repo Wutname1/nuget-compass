@@ -91,7 +91,7 @@ export function UpdatesPanel({
           onChange={toggleAll}
           aria-label="Select all updatable packages"
         />
-        <span style={{ fontSize: 10.5 }}>Select all</span>
+        <span style={{ fontSize: 'calc(10.5px * var(--ngc-font-scale))' }}>Select all</span>
         <span className="upd-bar-meta">
           {checked.size} of {filtered.length}
         </span>

@@ -291,7 +291,11 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     logger.trace(`view → host: ${msg.type}`);
     switch (msg.type) {
       case 'view:ready':
-        this.post({ type: 'host:init', filters: this.loadFilters() });
+        this.post({
+          type: 'host:init',
+          filters: this.loadFilters(),
+          fontScale: this.loadFontScale(),
+        });
         this.refresh();
         return;
       case 'view:refresh':
@@ -715,6 +719,16 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         cfg.get<boolean>('includePrerelease') ?? defaultFilterState.includePrerelease,
       showTransitive: cfg.get<boolean>('showTransitive') ?? defaultFilterState.showTransitive,
     };
+  }
+
+  loadFontScale(): number {
+    const raw = vscode.workspace.getConfiguration('nuget-compass').get<number>('fontScale') ?? 1;
+    if (!Number.isFinite(raw)) return 1;
+    return Math.min(1.5, Math.max(0.7, raw));
+  }
+
+  pushFontScale(): void {
+    this.post({ type: 'host:fontScale', fontScale: this.loadFontScale() });
   }
 
   private async saveFilters(filters: FilterState): Promise<void> {

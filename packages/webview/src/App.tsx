@@ -31,8 +31,13 @@ export function App(): JSX.Element {
 
   useEffect(() => {
     const onMessage = (event: MessageEvent<HostMessage>): void => {
-      dispatch({ type: 'host', message: event.data });
-      if (event.data.type === 'host:packageRows' || event.data.type === 'host:projects') {
+      const msg = event.data;
+      if (msg.type === 'host:init' || msg.type === 'host:fontScale') {
+        const clamped = Math.min(1.5, Math.max(0.7, msg.fontScale));
+        document.documentElement.style.setProperty('--ngc-font-scale', String(clamped));
+      }
+      dispatch({ type: 'host', message: msg });
+      if (msg.type === 'host:packageRows' || msg.type === 'host:projects') {
         setRefreshing(false);
       }
     };

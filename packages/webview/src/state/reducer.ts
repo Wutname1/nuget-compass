@@ -143,6 +143,8 @@ function applyHostMessage(state: AppState, msg: HostMessage): AppState {
   switch (msg.type) {
     case 'host:init':
       return { ...state, filters: msg.filters };
+    case 'host:fontScale':
+      return state;
     case 'host:projects': {
       // New scan: drop stale per-project status. Clear the selected package
       // if its project is no longer in the workspace.

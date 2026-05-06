@@ -23,10 +23,17 @@ export function activate(context: vscode.ExtensionContext): void {
   watcher.onDidCreate(scheduleRefresh);
   watcher.onDidDelete(scheduleRefresh);
 
+  const configListener = vscode.workspace.onDidChangeConfiguration((e) => {
+    if (e.affectsConfiguration('nuget-compass.fontScale')) {
+      provider.pushFontScale();
+    }
+  });
+
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(PackagesViewProvider.viewType, provider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),
+    configListener,
     vscode.commands.registerCommand('nuget-compass.open', () => {
       void vscode.commands.executeCommand('nuget-compass.packages.focus');
     }),

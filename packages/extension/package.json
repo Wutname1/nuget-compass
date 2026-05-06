@@ -120,6 +120,13 @@
           "type": "boolean",
           "default": false,
           "description": "Verbose logging of subprocess invocations and HTTP requests to the output channel."
+        },
+        "nuget-compass.fontScale": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0.7,
+          "maximum": 1.5,
+          "description": "Scale factor applied to text in the NuGet Compass panel. 1 = default; 1.2 = 20% larger; 0.9 = 10% smaller. Useful on high-DPI displays."
         }
       }
     }
