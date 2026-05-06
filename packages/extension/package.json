@@ -66,7 +66,7 @@
           "type": "string",
           "enum": ["compatible", "all"],
           "default": "compatible",
-          "description": "Whether to hide versions that don't target your project's framework."
+          "description": "Target framework filter. 'compatible' hides versions that don't target your project's framework; 'all' shows every version with incompatibility marked."
         },
         "nuget-compass.showTransitive": {
           "type": "boolean",

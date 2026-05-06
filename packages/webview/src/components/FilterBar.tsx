@@ -9,7 +9,7 @@ export function FilterBar({ filters, onChange }: FilterBarProps): JSX.Element {
   return (
     <div className="filter-bar">
       <label className="filter-label">
-        <span>TFM:</span>
+        <span>Target Framework:</span>
         <select
           value={filters.tfm}
           onChange={(e) => onChange({ ...filters, tfm: e.target.value as TfmFilter })}

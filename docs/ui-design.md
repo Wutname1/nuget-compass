@@ -15,7 +15,8 @@ Single VS Code Webview panel registered as a view in the Activity Bar.
 ┌─────────────────────────────────────────────────────────────────┐
 │  NuGet Compass                                       [↻] [⚙]   │  ← Header
 ├─────────────────────────────────────────────────────────────────┤
-│  Filter:  [TFM: Compatible ▾]  [Update: Minor ▾]  ☐ Prerelease │  ← Filter bar
+│  Filter:  [Target Framework: Compatible ▾]  [Update: Minor ▾]  │  ← Filter bar
+│           ☐ Prerelease   ☐ Show transitive                     │
 │           ☐ Show transitive                                     │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
@@ -28,7 +29,7 @@ Single VS Code Webview panel registered as a view in the Activity Bar.
 │  │ Microsoft.EntityFrameworkCore                             │  │
 │  │                            8.0.0  →  8.0.26             │  │
 │  │ Microsoft.Extensions.Configuration                        │  │
-│  │                            8.0.0  →  10.0.7  ✓ TFM ok   │  │  ← Major-allowed mode
+│  │                            8.0.0  →  10.0.7  ✓ Compatible│  │  ← Major-allowed mode
 │  │ ...                                                       │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │                                                                 │
@@ -49,10 +50,10 @@ Single VS Code Webview panel registered as a view in the Activity Bar.
 
 Sticky at top of the scrollable area. Three controls:
 
-#### TFM compatibility selector
-Dropdown, two options:
-- **Compatible** (default) — only versions that target the project's TFM are surfaced as updates
-- **Show all** — every version surfaces; incompatible ones get a red "✗ {tfm}" badge
+#### Target Framework compatibility selector
+Label: **"Target Framework"**. Dropdown, two options:
+- **Compatible only** (default) — only versions that target your project's framework are surfaced as updates
+- **Show all** — every version surfaces; incompatible ones get a red "✗ Requires {framework}" badge
 
 #### Update level selector
 Dropdown, three options:
@@ -70,7 +71,7 @@ When on, transitive dependencies appear under each top-level package, indented a
 
 Collapsible header showing:
 - Project name (file basename without extension)
-- TFM badge in `().` style: e.g., `(net8.0)` or `(net8.0; net9.0)` for multi-targeted
+- Target framework badge in `()` style: e.g., `(net8.0)` or `(net8.0; net9.0)` for multi-targeted
 - Outdated count: `3 updates` (clickable, scrolls to first outdated package)
 - Status icons: 🛡 if any vulnerable, ⚠ if any deprecated
 
@@ -96,13 +97,13 @@ PackageName              CurrentVersion  →  NewestAllowed   [badges]
 | Badge | Meaning | Color |
 |---|---|---|
 | `↑ N updates` | N versions newer than current pass current filters | foreground accent |
-| `✓ TFM ok` | Newest allowed is TFM-compatible (only shown in "Major allowed" + multi-targeted case for clarity) | foreground subtle |
+| `✓ Compatible` | Newest allowed targets your project's framework (only shown in "Major allowed" + multi-targeted case for clarity) | foreground subtle |
 | `⚠ {severity}` | Vulnerability badge; severity from SDK (Low/Mod/High/Critical) | yellow → red gradient by severity |
 | `🪦 deprecated` | Marked deprecated; tooltip shows reason and replacement | gray |
-| `✗ {tfm}` | Incompatible; only when "Show all" is on | red |
+| `✗ Requires {framework}` | Incompatible; only when "Show all" is on | red |
 | `🔒 prerelease` | Newest allowed is a prerelease | blue |
 
-Multiple badges stack horizontally in fixed order: vuln, deprecation, prerelease, TFM-status.
+Multiple badges stack horizontally in fixed order: vulnerability, deprecation, prerelease, framework status.
 
 ### Expanded version list
 
@@ -111,7 +112,7 @@ Below the package row, indented:
 ```
   └─ Available versions:
        12.0.1 (current)
-       13.0.0  ✗ net10.0   2025-08-14
+       13.0.0  ✗ Requires net10.0   2025-08-14
        12.5.0                2024-11-02   ← clickable, click to update
        12.4.1                2024-09-10
        12.3.0                2024-06-22
@@ -122,7 +123,7 @@ Below the package row, indented:
 - **Default rows shown:** up to 10 most recent passing the filter
 - **"Show all" link:** expands to full list (lazy-loaded if needed)
 - **Click a version:** confirm modal → run `dotnet add package`
-- **Hover a version:** tooltip shows release date, download count (from catalog), TFMs supported
+- **Hover a version:** tooltip shows release date, download count (from catalog), supported target frameworks
 - **Current version:** muted, marked `(current)`, not clickable
 - **Incompatible versions in "Show all" mode:** strike-through with `✗` badge
 
