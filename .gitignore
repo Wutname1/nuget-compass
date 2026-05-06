@@ -1,0 +1,29 @@
+# Node
+node_modules/
+*.log
+npm-debug.log*
+.pnpm-debug.log*
+
+# Build output
+dist/
+out/
+*.vsix
+.vscode-test/
+
+# Editor
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# .NET (fixtures)
+fixtures/**/bin/
+fixtures/**/obj/
+
+# Env
+.env
+.env.local
