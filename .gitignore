@@ -29,6 +29,9 @@ fixtures/**/obj/
 fixtures/**/*.sln
 fixtures/**/.vscode/
 
+# Generated changelog (built by .github/scripts/generate-changelog.sh during releases)
+/CHANGELOG.md
+
 # Env
 .env
 .env.local

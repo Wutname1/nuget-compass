@@ -12,6 +12,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -37,6 +39,18 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
+      - name: Generate changelog
+        env:
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PROJECT_NAME: 'NuGet Compass Changelog'
+        run: |
+          chmod +x .github/scripts/generate-changelog.sh
+          .github/scripts/generate-changelog.sh CHANGELOG.md
+
+      - name: Add changelog to run summary
+        run: cat CHANGELOG.md >> "$GITHUB_STEP_SUMMARY"
+
       - name: Package VSIX
         working-directory: packages/extension
         run: npx vsce package ${{ steps.ver.outputs.version }} --pre-release --no-dependencies --no-git-tag-version --out nuget-compass-${{ steps.ver.outputs.version }}.vsix
@@ -53,5 +67,5 @@ jobs:
           tag_name: ${{ steps.ver.outputs.tag }}
           name: ${{ steps.ver.outputs.tag }}
           prerelease: true
-          generate_release_notes: true
+          body_path: CHANGELOG.md
           files: packages/extension/nuget-compass-${{ steps.ver.outputs.version }}.vsix
