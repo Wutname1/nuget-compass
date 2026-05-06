@@ -126,6 +126,29 @@ body {
   background: var(--vscode-sideBarSectionHeader-background, transparent);
 }
 
+.project-header-badges {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 400;
+}
+
+.badge-updates {
+  background: var(--vscode-statusBarItem-prominentBackground, rgba(0, 122, 204, 0.25));
+  color: var(--vscode-statusBarItem-prominentForeground, inherit);
+}
+
+.badge-vuln-summary {
+  background: var(--vscode-charts-orange, rgba(220, 120, 0, 0.28));
+  color: var(--vscode-foreground);
+}
+
+.badge-deprecated-summary {
+  background: var(--vscode-disabledForeground, rgba(128, 128, 128, 0.2));
+  color: var(--vscode-foreground);
+}
+
 .project-tfm {
   color: var(--vscode-descriptionForeground);
   font-weight: 400;
@@ -320,6 +343,24 @@ body {
 .package-newer {
   color: var(--vscode-textLink-foreground);
   font-variant-numeric: tabular-nums;
+}
+
+.package-newer-skeleton {
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.project-progress {
+  color: var(--vscode-descriptionForeground);
+  font-weight: 400;
+  font-size: 0.75rem;
+  margin-left: auto;
+}
+
+.project-up-to-date {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
 }
 
 .muted {

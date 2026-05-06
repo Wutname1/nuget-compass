@@ -1,10 +1,17 @@
 import type { FilterState, HostMessage, PackageRow, Project } from '@nuget-compass/shared';
 import { defaultFilterState } from '@nuget-compass/shared';
 
+export interface ProjectStatus {
+  status: 'enriching' | 'ready';
+  progress?: { done: number; total: number };
+}
+
 export interface AppState {
   filters: FilterState;
   projects: Project[];
   rowsByProject: Record<string, PackageRow[]>;
+  /** Per-project enrichment progress, keyed by project path. */
+  projectStatus: Record<string, ProjectStatus>;
   /** Versions returned from a host:packageVersions message, keyed by `${projectPath}::${packageId}`. */
   versionsByPackage: Record<string, import('@nuget-compass/shared').AvailableVersion[]>;
   /** Which packages are expanded in the UI. Same key shape as versionsByPackage. */
@@ -17,6 +24,7 @@ export const initialState: AppState = {
   filters: defaultFilterState,
   projects: [],
   rowsByProject: {},
+  projectStatus: {},
   versionsByPackage: {},
   expanded: {},
   status: 'idle',
@@ -52,7 +60,8 @@ function applyHostMessage(state: AppState, msg: HostMessage): AppState {
     case 'host:init':
       return { ...state, filters: msg.filters };
     case 'host:projects':
-      return { ...state, projects: msg.projects };
+      // New scan: drop stale per-project status.
+      return { ...state, projects: msg.projects, projectStatus: {} };
     case 'host:packageRows':
       return {
         ...state,
@@ -67,6 +76,14 @@ function applyHostMessage(state: AppState, msg: HostMessage): AppState {
         },
         // Update the row's newestAllowed if we got a fresher value.
         rowsByProject: updateRowNewest(state.rowsByProject, msg),
+      };
+    case 'host:projectStatus':
+      return {
+        ...state,
+        projectStatus: {
+          ...state.projectStatus,
+          [msg.projectPath]: { status: msg.status, progress: msg.progress },
+        },
       };
     case 'host:status':
       return { ...state, status: msg.status };

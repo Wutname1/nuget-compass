@@ -49,6 +49,18 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     void this.runRefresh();
   }
 
+  async forceRefresh(): Promise<void> {
+    // Invalidate the catalog cache for every package visible in the last
+    // scan, then re-run the scan. Fresh installs read from nuget.org.
+    const packageIds = new Set<string>();
+    for (const project of this.lastProjects) {
+      for (const pkg of project.packages) packageIds.add(pkg.id);
+    }
+    await Promise.all(Array.from(packageIds).map((id) => this.catalog.invalidate(id)));
+    logger.info(`force refresh: invalidated ${packageIds.size} package(s) in catalog cache`);
+    this.refresh();
+  }
+
   private async runRefresh(): Promise<void> {
     this.post({ type: 'host:status', status: 'scanning' });
     const filters = this.loadFilters();
@@ -65,6 +77,12 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
           .filter((p) => filters.showTransitive || !p.isTransitive)
           .map((pkg) => ({ projectPath: project.path, package: pkg }));
         this.post({ type: 'host:packageRows', projectPath: project.path, rows });
+        this.post({
+          type: 'host:projectStatus',
+          projectPath: project.path,
+          status: 'enriching',
+          progress: { done: 0, total: rows.length },
+        });
       }
 
       if (result.errors.length > 0) {
@@ -104,6 +122,27 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       (p) => filters.showTransitive || !p.isTransitive,
     );
 
+    this.post({
+      type: 'host:projectStatus',
+      projectPath: project.path,
+      status: 'enriching',
+      progress: { done: 0, total: visiblePackages.length },
+    });
+
+    let done = 0;
+    const reportProgress = (): void => {
+      done++;
+      // Throttle progress messages to avoid spamming the webview.
+      if (done === visiblePackages.length || done % 5 === 0) {
+        this.post({
+          type: 'host:projectStatus',
+          projectPath: project.path,
+          status: 'enriching',
+          progress: { done, total: visiblePackages.length },
+        });
+      }
+    };
+
     const [vulnsResult, depsResult, newestResults] = await Promise.allSettled([
       scanVulnerabilities(project.path, cwd),
       scanDeprecations(project.path, cwd),
@@ -123,6 +162,8 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
               `newestAllowed lookup failed for ${pkg.id}: ${describeReason(err)}`,
             );
             return [pkg.id, undefined] as const;
+          } finally {
+            reportProgress();
           }
         }),
       ),
@@ -165,6 +206,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     });
 
     this.post({ type: 'host:packageRows', projectPath: project.path, rows });
+    this.post({ type: 'host:projectStatus', projectPath: project.path, status: 'ready' });
   }
 
   private async expandPackage(projectPath: string, packageId: string): Promise<void> {
@@ -217,7 +259,8 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         this.refresh();
         return;
       case 'view:refresh':
-        this.refresh();
+        if (msg.forceCacheBust) void this.forceRefresh();
+        else this.refresh();
         return;
       case 'view:setFilters':
         void this.saveFilters(msg.filters);

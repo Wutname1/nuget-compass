@@ -18,6 +18,9 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('nuget-compass.refresh', () => {
       provider.refresh();
     }),
+    vscode.commands.registerCommand('nuget-compass.forceRefresh', () => {
+      void provider.forceRefresh();
+    }),
   );
 
   logger.info('NuGet Compass activated');

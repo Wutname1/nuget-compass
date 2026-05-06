@@ -6,11 +6,12 @@ import type {
   VulnerabilityInfo,
 } from '@nuget-compass/shared';
 import { vscode } from '../vscode.js';
-import { packageKey } from '../state/reducer.js';
+import { packageKey, type ProjectStatus } from '../state/reducer.js';
 
 interface ProjectListProps {
   projects: Project[];
   rowsByProject: Record<string, PackageRow[]>;
+  projectStatus: Record<string, ProjectStatus>;
   versionsByPackage: Record<string, AvailableVersion[]>;
   expanded: Record<string, true>;
   onToggleExpanded: (projectPath: string, packageId: string) => void;
@@ -19,6 +20,7 @@ interface ProjectListProps {
 export function ProjectList({
   projects,
   rowsByProject,
+  projectStatus,
   versionsByPackage,
   expanded,
   onToggleExpanded,
@@ -37,22 +39,79 @@ export function ProjectList({
 
   return (
     <ul className="project-list">
-      {projects.map((p) => (
-        <li key={p.path} className="project-group">
-          <header className="project-header">
-            <span className="project-name">{p.name}</span>
-            <span className="project-tfm">({p.targetFrameworks.join('; ')})</span>
-          </header>
-          <PackageRows
-            projectPath={p.path}
-            rows={rowsByProject[p.path] ?? []}
-            versionsByPackage={versionsByPackage}
-            expanded={expanded}
-            onToggleExpanded={onToggleExpanded}
-          />
-        </li>
-      ))}
+      {projects.map((p) => {
+        const rows = rowsByProject[p.path] ?? [];
+        const status = projectStatus[p.path];
+        const summary = summarizeRows(rows);
+        const isEnriching = status?.status === 'enriching';
+        const isReady = status?.status === 'ready';
+        return (
+          <li key={p.path} className="project-group">
+            <header className="project-header">
+              <span className="project-name">{p.name}</span>
+              <span className="project-tfm">({p.targetFrameworks.join('; ')})</span>
+              {isEnriching && status.progress ? (
+                <span className="project-progress">
+                  {status.progress.done}/{status.progress.total} loaded
+                </span>
+              ) : null}
+              {isReady ? <ProjectHeaderBadges summary={summary} /> : null}
+            </header>
+            <PackageRows
+              projectPath={p.path}
+              rows={rows}
+              versionsByPackage={versionsByPackage}
+              expanded={expanded}
+              onToggleExpanded={onToggleExpanded}
+              showSkeleton={isEnriching}
+            />
+            {isReady && rows.length > 0 && summary.withUpdates === 0 ? (
+              <p className="muted indent project-up-to-date">All packages are up to date.</p>
+            ) : null}
+          </li>
+        );
+      })}
     </ul>
+  );
+}
+
+interface ProjectSummary {
+  total: number;
+  withUpdates: number;
+  vulnerable: number;
+  deprecated: number;
+}
+
+function summarizeRows(rows: PackageRow[]): ProjectSummary {
+  let withUpdates = 0;
+  let vulnerable = 0;
+  let deprecated = 0;
+  for (const row of rows) {
+    if (row.newestAllowed && row.newestAllowed !== row.package.resolvedVersion) withUpdates++;
+    if (row.vulnerability && row.vulnerability.length > 0) vulnerable++;
+    if (row.deprecation) deprecated++;
+  }
+  return { total: rows.length, withUpdates, vulnerable, deprecated };
+}
+
+function ProjectHeaderBadges({ summary }: { summary: ProjectSummary }): JSX.Element | null {
+  if (summary.total === 0) return null;
+  return (
+    <span className="project-header-badges">
+      {summary.withUpdates > 0 ? (
+        <span className="badge badge-updates">↑ {summary.withUpdates} update{summary.withUpdates === 1 ? '' : 's'}</span>
+      ) : null}
+      {summary.vulnerable > 0 ? (
+        <span className="badge badge-vuln-summary" title={`${summary.vulnerable} vulnerable package${summary.vulnerable === 1 ? '' : 's'}`}>
+          ⚠ {summary.vulnerable}
+        </span>
+      ) : null}
+      {summary.deprecated > 0 ? (
+        <span className="badge badge-deprecated-summary" title={`${summary.deprecated} deprecated package${summary.deprecated === 1 ? '' : 's'}`}>
+          deprecated {summary.deprecated}
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -62,6 +121,7 @@ interface PackageRowsProps {
   versionsByPackage: Record<string, AvailableVersion[]>;
   expanded: Record<string, true>;
   onToggleExpanded: (projectPath: string, packageId: string) => void;
+  showSkeleton?: boolean;
 }
 
 function PackageRows({
@@ -70,6 +130,7 @@ function PackageRows({
   versionsByPackage,
   expanded,
   onToggleExpanded,
+  showSkeleton,
 }: PackageRowsProps): JSX.Element {
   if (rows.length === 0) {
     return <p className="muted indent">No packages.</p>;
@@ -101,6 +162,8 @@ function PackageRows({
               <span className="package-version">{row.package.resolvedVersion}</span>
               {row.newestAllowed && row.newestAllowed !== row.package.resolvedVersion ? (
                 <span className="package-newer">→ {row.newestAllowed}</span>
+              ) : showSkeleton && row.newestAllowed === undefined ? (
+                <span className="package-newer-skeleton" aria-hidden="true">→ …</span>
               ) : (
                 <span />
               )}

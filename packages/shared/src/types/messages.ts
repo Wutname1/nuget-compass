@@ -40,6 +40,15 @@ export interface HostStatusMessage {
   status: 'idle' | 'scanning' | 'fetching';
 }
 
+export interface HostProjectStatusMessage {
+  type: 'host:projectStatus';
+  projectPath: string;
+  /** 'enriching' = catalog/vuln/deprec scans in flight; 'ready' = all data present. */
+  status: 'enriching' | 'ready';
+  /** Optional progress hint, e.g. "12/40 packages". */
+  progress?: { done: number; total: number };
+}
+
 export interface HostPackageVersionsMessage {
   type: 'host:packageVersions';
   projectPath: string;
@@ -54,6 +63,7 @@ export type HostMessage =
   | HostProjectsMessage
   | HostPackageRowsMessage
   | HostPackageVersionsMessage
+  | HostProjectStatusMessage
   | HostErrorMessage
   | HostStatusMessage;
 

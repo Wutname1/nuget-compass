@@ -46,6 +46,11 @@
         "command": "nuget-compass.refresh",
         "title": "NuGet Compass: Refresh",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "nuget-compass.forceRefresh",
+        "title": "NuGet Compass: Force Refresh (clear cache)",
+        "icon": "$(sync)"
       }
     ],
     "configuration": {

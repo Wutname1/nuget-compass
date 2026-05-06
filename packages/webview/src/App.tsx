@@ -30,8 +30,13 @@ export function App(): JSX.Element {
           <button
             type="button"
             className="icon-button"
-            title="Refresh"
-            onClick={() => vscode.postMessage({ type: 'view:refresh' })}
+            title="Refresh (Shift-click to clear cache)"
+            onClick={(e) =>
+              vscode.postMessage({
+                type: 'view:refresh',
+                forceCacheBust: e.shiftKey,
+              })
+            }
           >
             ↻
           </button>
@@ -48,6 +53,7 @@ export function App(): JSX.Element {
       <ProjectList
         projects={state.projects}
         rowsByProject={state.rowsByProject}
+        projectStatus={state.projectStatus}
         versionsByPackage={state.versionsByPackage}
         expanded={state.expanded}
         onToggleExpanded={(projectPath, packageId) =>
