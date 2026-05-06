@@ -50,6 +50,19 @@ export function ProjectList({
             <header className="project-header">
               <span className="project-name">{p.name}</span>
               <span className="project-tfm">({p.targetFrameworks.join('; ')})</span>
+              {p.centralPackageManagement ? (
+                <span
+                  className="badge badge-cpm"
+                  title={`Central Package Management active (${p.centralPackageManagement.propsPath})`}
+                >
+                  CPM
+                </span>
+              ) : null}
+              {p.lockFilePath ? (
+                <span className="badge badge-locked" title={`Locked: ${p.lockFilePath}`}>
+                  locked
+                </span>
+              ) : null}
               {isEnriching && status.progress ? (
                 <span className="project-progress">
                   {status.progress.done}/{status.progress.total} loaded
@@ -157,7 +170,7 @@ function PackageRows({
           <li key={row.package.id} className="package-row-wrapper">
             <button
               type="button"
-              className="package-row"
+              className={'package-row' + (row.package.isTransitive ? ' package-row-transitive' : '')}
               aria-expanded={isOpen}
               onClick={() => {
                 onToggleExpanded(projectPath, row.package.id);
@@ -170,7 +183,12 @@ function PackageRows({
                 }
               }}
             >
-              <span className="package-name">{row.package.id}</span>
+              <span className="package-name">
+                {row.package.id}
+                {row.package.isTransitive ? (
+                  <span className="badge badge-transitive">transitive</span>
+                ) : null}
+              </span>
               <span className="package-version">{row.package.resolvedVersion}</span>
               {row.newestAllowed && row.newestAllowed !== row.package.resolvedVersion ? (
                 <span className="package-newer">→ {row.newestAllowed}</span>

@@ -308,12 +308,16 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
+    const promptDetail = pkg.isTransitive
+      ? `${packageId} is currently a transitive dependency at ${pkg.resolvedVersion}. ` +
+        `Installing ${toVersion} adds it as a top-level <PackageReference>, pinning it across restores. Continue?`
+      : `Update ${packageId} from ${pkg.resolvedVersion} to ${toVersion}?`;
     const choice = await vscode.window.showInformationMessage(
-      `Update ${packageId} from ${pkg.resolvedVersion} to ${toVersion}?`,
+      promptDetail,
       { modal: true },
-      'Update',
+      pkg.isTransitive ? 'Pin' : 'Update',
     );
-    if (choice !== 'Update') return;
+    if (choice !== 'Update' && choice !== 'Pin') return;
 
     this.post({ type: 'host:status', status: 'fetching' });
     try {

@@ -10,6 +10,10 @@ export interface Project {
   targetFrameworks: string[];
   /** Top-level packages installed in the project. */
   packages: InstalledPackage[];
+  /** Path to the governing Directory.Packages.props if CPM is active for this project. */
+  centralPackageManagement?: { propsPath: string };
+  /** Path to packages.lock.json if locked-restore is in use. */
+  lockFilePath?: string;
 }
 
 /**

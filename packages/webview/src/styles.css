@@ -560,6 +560,33 @@ body {
   align-self: flex-start;
 }
 
+.badge-cpm {
+  background: var(--vscode-charts-purple, rgba(160, 100, 200, 0.25));
+  color: var(--vscode-foreground);
+  font-size: 0.65rem;
+  font-weight: 500;
+}
+
+.badge-locked {
+  background: var(--vscode-charts-blue, rgba(0, 122, 204, 0.25));
+  color: var(--vscode-foreground);
+  font-size: 0.65rem;
+  font-weight: 500;
+}
+
+.badge-transitive {
+  background: var(--vscode-disabledForeground, rgba(128, 128, 128, 0.18));
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.65rem;
+  margin-left: 0.4rem;
+  font-weight: 400;
+}
+
+.package-row-transitive .package-name {
+  font-style: italic;
+  color: var(--vscode-descriptionForeground);
+}
+
 .muted {
   color: var(--vscode-descriptionForeground);
 }
