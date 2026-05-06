@@ -1,0 +1,118 @@
+{
+  "name": "nuget-compass",
+  "displayName": "NuGet Compass",
+  "description": "NuGet for VS Code, with target framework filtering that actually works.",
+  "version": "0.0.1",
+  "private": true,
+  "publisher": "TBD",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": ["Other"],
+  "keywords": ["nuget", "dotnet", "csharp", "package manager", "tfm"],
+  "main": "./dist/extension.cjs",
+  "activationEvents": [
+    "onView:nuget-compass.packages",
+    "workspaceContains:**/*.csproj",
+    "workspaceContains:**/*.fsproj",
+    "workspaceContains:**/*.vbproj"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "nuget-compass",
+          "title": "NuGet Compass",
+          "icon": "./resources/compass.svg"
+        }
+      ]
+    },
+    "views": {
+      "nuget-compass": [
+        {
+          "type": "webview",
+          "id": "nuget-compass.packages",
+          "name": "Packages"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "nuget-compass.open",
+        "title": "NuGet Compass: Open"
+      },
+      {
+        "command": "nuget-compass.refresh",
+        "title": "NuGet Compass: Refresh",
+        "icon": "$(refresh)"
+      }
+    ],
+    "configuration": {
+      "title": "NuGet Compass",
+      "properties": {
+        "nuget-compass.updateLevel": {
+          "type": "string",
+          "enum": ["patch", "minor", "major"],
+          "default": "minor",
+          "description": "How aggressively to suggest updates. 'patch' = same major.minor; 'minor' = same major; 'major' = any newer version."
+        },
+        "nuget-compass.includePrerelease": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include prerelease versions when listing available updates."
+        },
+        "nuget-compass.tfmFilter": {
+          "type": "string",
+          "enum": ["compatible", "all"],
+          "default": "compatible",
+          "description": "Whether to hide versions that don't target your project's framework."
+        },
+        "nuget-compass.showTransitive": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show transitive dependencies in the package list."
+        },
+        "nuget-compass.dotnetPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path to the dotnet executable. Empty = auto-detect from PATH."
+        },
+        "nuget-compass.requestTimeoutMs": {
+          "type": "number",
+          "default": 10000,
+          "description": "Timeout for individual NuGet API requests, in milliseconds."
+        },
+        "nuget-compass.maxConcurrentCatalogRequests": {
+          "type": "number",
+          "default": 8,
+          "description": "Maximum concurrent NuGet catalog API requests."
+        },
+        "nuget-compass.trace": {
+          "type": "boolean",
+          "default": false,
+          "description": "Verbose logging of subprocess invocations and HTTP requests to the output channel."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.config.mjs --production",
+    "dev": "node esbuild.config.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "clean": "rimraf dist",
+    "package": "vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "@nuget-compass/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/vscode": "^1.95.0",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "^0.24.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.2"
+  }
+}

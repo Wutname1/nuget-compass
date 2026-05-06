@@ -10,9 +10,8 @@ out/
 *.vsix
 .vscode-test/
 
-# Editor
+# Editor — user-specific only; shared launch.json/tasks.json/extensions.json are committed
 .vscode/settings.json
-.vscode/launch.json
 .idea/
 *.swp
 

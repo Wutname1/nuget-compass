@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/extension",
+        "${workspaceFolder}/fixtures/net8-mixed-versions"
+      ],
+      "outFiles": ["${workspaceFolder}/packages/extension/dist/**/*.cjs"],
+      "preLaunchTask": "build"
+    }
+  ]
+}
