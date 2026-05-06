@@ -12,9 +12,8 @@ import { defaultFilterState } from '@nuget-compass/shared';
 import { logger } from '../logging/logger.js';
 import { scanWorkspace } from '../dotnet/scan.js';
 import { DotnetNotFoundError } from '../dotnet/exec.js';
-import { runOutdatedScan, type OutdatedRow } from '../dotnet/outdated.js';
 import { createCatalogClient, type NuGetCatalogClient } from '../nuget/catalogClient.js';
-import { resolveAvailableVersions } from '../nuget/versionResolver.js';
+import { resolveAvailableVersions, resolveNewestAllowed } from '../nuget/versionResolver.js';
 import { scanVulnerabilities } from '../dotnet/vulnerable.js';
 import { scanDeprecations } from '../dotnet/deprecated.js';
 import { addPackage } from '../dotnet/addPackage.js';
@@ -59,7 +58,8 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       this.post({ type: 'host:projects', projects: result.projects });
 
       // First paint: send rows without newestAllowed so the UI shows packages
-      // immediately. Run the outdated check in the background and update.
+      // immediately. enrichProject fills in newestAllowed + badges in the
+      // background.
       for (const project of result.projects) {
         const rows: PackageRow[] = project.packages
           .filter((p) => filters.showTransitive || !p.isTransitive)
@@ -76,8 +76,8 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         });
       }
 
-      // Second paint: enrich with newestAllowed (TFM-blind) plus vulnerability
-      // and deprecation badges. Three SDK calls per project, all in parallel.
+      // Second paint: enrich with newestAllowed (target-framework aware via
+      // the catalog) plus vulnerability and deprecation badges from the SDK.
       this.post({ type: 'host:status', status: 'fetching' });
       await Promise.all(
         result.projects.map((project) => this.enrichProject(project, filters)),
@@ -98,25 +98,42 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   private async enrichProject(project: Project, filters: FilterState): Promise<void> {
     const cwd = path.dirname(project.path);
 
-    // Run the three scans in parallel; any single failure degrades that
-    // signal but doesn't abort the others.
-    const [outdatedResult, vulnsResult, depsResult] = await Promise.allSettled([
-      runOutdatedScan(project.path, cwd, {
-        updateLevel: filters.updateLevel,
-        includePrerelease: filters.includePrerelease,
-      }),
+    // Vulnerability + deprecation scans come from the SDK and are accurate.
+    // newestAllowed comes from the catalog (target-framework aware) per package.
+    const visiblePackages = project.packages.filter(
+      (p) => filters.showTransitive || !p.isTransitive,
+    );
+
+    const [vulnsResult, depsResult, newestResults] = await Promise.allSettled([
       scanVulnerabilities(project.path, cwd),
       scanDeprecations(project.path, cwd),
+      Promise.all(
+        visiblePackages.map(async (pkg) => {
+          try {
+            const newest = await resolveNewestAllowed({
+              packageId: pkg.id,
+              currentVersion: pkg.resolvedVersion,
+              projectTargetFrameworks: project.targetFrameworks,
+              filters,
+              catalog: this.catalog,
+            });
+            return [pkg.id, newest] as const;
+          } catch (err) {
+            logger.warn(
+              `newestAllowed lookup failed for ${pkg.id}: ${describeReason(err)}`,
+            );
+            return [pkg.id, undefined] as const;
+          }
+        }),
+      ),
     ]);
 
-    const latestById = new Map<string, string>();
-    if (outdatedResult.status === 'fulfilled') {
-      for (const row of outdatedResult.value as OutdatedRow[]) {
-        if (row.latestVersion) latestById.set(row.packageId, row.latestVersion);
-      }
+    const newestById = new Map<string, string | undefined>();
+    if (newestResults.status === 'fulfilled') {
+      for (const [id, ver] of newestResults.value) newestById.set(id, ver);
     } else {
       logger.warn(
-        `outdated scan failed for ${project.path}: ${describeReason(outdatedResult.reason)}`,
+        `catalog enrichment failed for ${project.path}: ${describeReason(newestResults.reason)}`,
       );
     }
 
@@ -135,19 +152,17 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
           ),
           new Map());
 
-    const rows: PackageRow[] = project.packages
-      .filter((p) => filters.showTransitive || !p.isTransitive)
-      .map((pkg) => {
-        const key = `${project.path}::${pkg.id}`;
-        const row: PackageRow = { projectPath: project.path, package: pkg };
-        const latest = latestById.get(pkg.id);
-        if (latest !== undefined) row.newestAllowed = latest;
-        const vulns = vulnsByKey.get(key);
-        if (vulns) row.vulnerability = vulns;
-        const dep = depsByKey.get(key);
-        if (dep) row.deprecation = dep;
-        return row;
-      });
+    const rows: PackageRow[] = visiblePackages.map((pkg) => {
+      const key = `${project.path}::${pkg.id}`;
+      const row: PackageRow = { projectPath: project.path, package: pkg };
+      const newest = newestById.get(pkg.id);
+      if (newest !== undefined) row.newestAllowed = newest;
+      const vulns = vulnsByKey.get(key);
+      if (vulns) row.vulnerability = vulns;
+      const dep = depsByKey.get(key);
+      if (dep) row.deprecation = dep;
+      return row;
+    });
 
     this.post({ type: 'host:packageRows', projectPath: project.path, rows });
   }
@@ -171,7 +186,6 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         packageId,
         currentVersion: pkg.resolvedVersion,
         projectTargetFrameworks: project.targetFrameworks,
-        cwd: path.dirname(project.path),
         filters,
         catalog: this.catalog,
       });

@@ -1,115 +1,105 @@
 import type { AvailableVersion, FilterState } from '@nuget-compass/shared';
-import { searchPackageVersions } from '../dotnet/packageSearch.js';
-import { NuGetCatalogClient } from './catalogClient.js';
+import { NuGetCatalogClient, type PackageVersionMetadata } from './catalogClient.js';
 import { isVersionCompatibleWithProject } from './tfmCompat.js';
-import { compareVersions, isPrerelease, parseVersion } from '../semver/parse.js';
+import { compareVersions, isPrerelease, parseVersion, type ParsedVersion } from '../semver/parse.js';
 import { passesUpdateLevel } from '../semver/filter.js';
 
 export interface ResolveOptions {
   packageId: string;
   currentVersion: string;
   projectTargetFrameworks: string[];
-  cwd: string;
   filters: FilterState;
   catalog: NuGetCatalogClient;
-  /** Cap on how many versions to enrich with catalog data per call. */
-  maxVersionsToEnrich?: number;
 }
 
-const DEFAULT_MAX_VERSIONS = 40;
-
-/**
- * Enumerate all versions of a package, enrich the most relevant ones with
- * catalog metadata (target framework support), and return them filtered and
- * sorted newest-first.
- *
- * "Most relevant" = the latest N versions that pass the update-level rule,
- * plus the current version. Older versions are returned bare (no TFM data),
- * which the UI can show in an "older versions" tail behind a click.
- */
-export async function resolveAvailableVersions(
-  options: ResolveOptions,
-): Promise<{
+export interface ResolveResult {
   versions: AvailableVersion[];
   newestAllowed?: string;
-}> {
-  const allRaw = await searchPackageVersions(options.packageId, options.cwd);
-  const current = parseVersion(options.currentVersion);
+}
 
-  const parsed = allRaw
-    .map((raw) => ({ raw, parsed: parseVersion(raw) }))
-    .filter((x): x is { raw: string; parsed: NonNullable<ReturnType<typeof parseVersion>> } =>
-      Boolean(x.parsed),
-    )
-    .sort((a, b) => compareVersions(b.parsed, a.parsed));
+/**
+ * Walk every published version (with TFM data) of a package, sort newest-first,
+ * and surface them to the UI. Returns sorted AvailableVersion[] plus the
+ * highest version that satisfies the user's filters.
+ */
+export async function resolveAvailableVersions(options: ResolveOptions): Promise<ResolveResult> {
+  const all = await options.catalog.getPackageVersions(options.packageId);
+  const sorted = sortNewestFirst(all);
 
-  // Determine which versions are "in scope for filtering": versions that, if
-  // compatible, would be offered as updates. We enrich those with catalog
-  // metadata since the user will be looking at them.
-  const inScope: typeof parsed = [];
-  if (current) {
-    for (const entry of parsed) {
-      if (
-        passesUpdateLevel(entry.parsed, {
-          current,
-          level: options.filters.updateLevel,
-          includePrerelease: options.filters.includePrerelease,
-        })
-      ) {
-        inScope.push(entry);
-      }
-      if (inScope.length >= (options.maxVersionsToEnrich ?? DEFAULT_MAX_VERSIONS)) break;
-    }
-  }
+  const versions: AvailableVersion[] = sorted.map((m) => ({
+    version: m.version,
+    published: m.published,
+    supportedFrameworks: m.supportedFrameworks,
+    isCompatible: m.supportedFrameworks.length === 0
+      ? true
+      : isVersionCompatibleWithProject(options.projectTargetFrameworks, m.supportedFrameworks),
+    isPrerelease: isPrereleaseString(m.version),
+  }));
 
-  const enriched = await options.catalog.getManyVersionMetadata(
-    options.packageId,
-    inScope.map((v) => v.raw),
-  );
-  const enrichedByVersion = new Map(enriched.map((m) => [m.version, m]));
-
-  const versions: AvailableVersion[] = parsed.map(({ raw, parsed: p }) => {
-    const meta = enrichedByVersion.get(raw);
-    const supportedFrameworks = meta?.supportedFrameworks ?? [];
-    const isCompatible =
-      meta === undefined
-        ? true // unknown - don't claim incompatible
-        : isVersionCompatibleWithProject(options.projectTargetFrameworks, supportedFrameworks);
-    return {
-      version: raw,
-      published: meta?.published,
-      supportedFrameworks,
-      isCompatible,
-      isPrerelease: isPrerelease(p),
-    };
-  });
-
-  const newestAllowed = current
-    ? findNewestAllowed(versions, current.raw, options)
-    : undefined;
-
+  const newestAllowed = findNewestAllowedFromVersions(versions, options);
   return { versions, newestAllowed };
 }
 
-function findNewestAllowed(
-  versions: AvailableVersion[],
-  currentRaw: string,
-  options: ResolveOptions,
-): string | undefined {
-  const current = parseVersion(currentRaw);
+/**
+ * Fast path used during refresh: just compute the newest version that passes
+ * filters, without building the full AvailableVersion[]. Same data source,
+ * same accuracy - we just don't allocate the user-facing list.
+ */
+export async function resolveNewestAllowed(options: ResolveOptions): Promise<string | undefined> {
+  const all = await options.catalog.getPackageVersions(options.packageId);
+  const current = parseVersion(options.currentVersion);
   if (!current) return undefined;
 
-  // versions is already sorted newest-first.
+  const sorted = sortNewestFirst(all);
+
+  for (const meta of sorted) {
+    const parsed = parseVersion(meta.version);
+    if (!parsed) continue;
+    if (!passesUpdateLevel(parsed, {
+      current,
+      level: options.filters.updateLevel,
+      includePrerelease: options.filters.includePrerelease,
+    })) {
+      continue;
+    }
+    if (
+      options.filters.tfm === 'compatible' &&
+      meta.supportedFrameworks.length > 0 &&
+      !isVersionCompatibleWithProject(options.projectTargetFrameworks, meta.supportedFrameworks)
+    ) {
+      continue;
+    }
+    return meta.version;
+  }
+  return undefined;
+}
+
+function sortNewestFirst(metas: readonly PackageVersionMetadata[]): PackageVersionMetadata[] {
+  return [...metas].sort((a, b) => {
+    const pa = parseVersion(a.version);
+    const pb = parseVersion(b.version);
+    if (!pa && !pb) return 0;
+    if (!pa) return 1;
+    if (!pb) return -1;
+    return compareVersions(pb, pa);
+  });
+}
+
+function findNewestAllowedFromVersions(
+  versions: readonly AvailableVersion[],
+  options: ResolveOptions,
+): string | undefined {
+  const current = parseVersion(options.currentVersion);
+  if (!current) return undefined;
+
   for (const v of versions) {
     const parsed = parseVersion(v.version);
     if (!parsed) continue;
-    if (
-      !passesUpdateLevel(parsed, {
-        current,
-        level: options.filters.updateLevel,
-        includePrerelease: options.filters.includePrerelease,
-      })
-    ) {
+    if (!passesUpdateLevel(parsed, {
+      current,
+      level: options.filters.updateLevel,
+      includePrerelease: options.filters.includePrerelease,
+    })) {
       continue;
     }
     if (options.filters.tfm === 'compatible' && !v.isCompatible) continue;
@@ -117,3 +107,11 @@ function findNewestAllowed(
   }
   return undefined;
 }
+
+function isPrereleaseString(version: string): boolean {
+  const parsed = parseVersion(version);
+  return parsed ? isPrerelease(parsed) : false;
+}
+
+// Re-exported so other modules can use the same parser without importing twice.
+export type { ParsedVersion };

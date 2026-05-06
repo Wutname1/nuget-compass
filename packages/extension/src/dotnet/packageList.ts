@@ -30,17 +30,10 @@ export interface DotnetPackageEntry {
   /** Present on top-level packages; absent on transitive. */
   requestedVersion?: string;
   resolvedVersion: string;
-  /** Present when --outdated is used. */
-  latestVersion?: string;
 }
 
 export interface ListPackagesOptions {
   includeTransitive?: boolean;
-  outdated?: boolean;
-  /** Combine with `outdated`. Mutually exclusive with `highestPatch`. */
-  highestMinor?: boolean;
-  highestPatch?: boolean;
-  includePrerelease?: boolean;
   timeoutMs?: number;
 }
 
@@ -56,12 +49,6 @@ export async function listPackages(
   const args = ['package', 'list', '--project', projectOrSolutionPath, '--format', 'json'];
   if (options.includeTransitive) {
     args.push('--include-transitive');
-  }
-  if (options.outdated) {
-    args.push('--outdated');
-    if (options.highestMinor) args.push('--highest-minor');
-    else if (options.highestPatch) args.push('--highest-patch');
-    if (options.includePrerelease) args.push('--include-prerelease');
   }
 
   const result = await runDotnet(args, cwd, options.timeoutMs ?? 30_000);

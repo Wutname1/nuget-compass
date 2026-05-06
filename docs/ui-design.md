@@ -191,7 +191,6 @@ Existing cached catalog data still flows through the filter; install/uninstall s
 ## Out of scope for v0.1 UI
 
 - Multi-select rows (v0.2 with Update All)
-- Drag to reorder projects (no clear use case)
 - Inline release notes (v0.4)
 - Charts / graphs (no use case at MVP)
 - Custom themes (inherit VS Code's)
