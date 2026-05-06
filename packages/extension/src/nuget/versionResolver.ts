@@ -1,5 +1,5 @@
 import type { AvailableVersion, FilterState } from '@nuget-compass/shared';
-import { NuGetCatalogClient, type PackageVersionMetadata } from './catalogClient.js';
+import type { NuGetCatalogClient, PackageVersionMetadata } from './catalogClient.js';
 import { isVersionCompatibleWithProject } from './tfmCompat.js';
 import { compareVersions, isPrerelease, parseVersion, type ParsedVersion } from '../semver/parse.js';
 import { passesUpdateLevel } from '../semver/filter.js';

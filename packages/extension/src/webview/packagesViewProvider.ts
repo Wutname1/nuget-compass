@@ -14,8 +14,8 @@ import { scanWorkspace } from '../dotnet/scan.js';
 import { DotnetNotFoundError } from '../dotnet/exec.js';
 import { createCatalogClient, type NuGetCatalogClient } from '../nuget/catalogClient.js';
 import { resolveAvailableVersions, resolveNewestAllowed } from '../nuget/versionResolver.js';
-import { scanVulnerabilities } from '../dotnet/vulnerable.js';
-import { scanDeprecations } from '../dotnet/deprecated.js';
+import { scanVulnerabilities, type VulnerabilitiesByPackage } from '../dotnet/vulnerable.js';
+import { scanDeprecations, type DeprecationsByPackage } from '../dotnet/deprecated.js';
 import { addPackage } from '../dotnet/addPackage.js';
 import { removePackage } from '../dotnet/removePackage.js';
 import { searchPackages } from '../dotnet/searchPackages.js';
@@ -203,20 +203,24 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       );
     }
 
-    const vulnsByKey =
-      vulnsResult.status === 'fulfilled'
-        ? vulnsResult.value
-        : (logger.warn(
-            `vulnerability scan failed for ${project.path}: ${describeReason(vulnsResult.reason)}`,
-          ),
-          new Map());
-    const depsByKey =
-      depsResult.status === 'fulfilled'
-        ? depsResult.value
-        : (logger.warn(
-            `deprecation scan failed for ${project.path}: ${describeReason(depsResult.reason)}`,
-          ),
-          new Map());
+    let vulnsByKey: VulnerabilitiesByPackage;
+    if (vulnsResult.status === 'fulfilled') {
+      vulnsByKey = vulnsResult.value;
+    } else {
+      logger.warn(
+        `vulnerability scan failed for ${project.path}: ${describeReason(vulnsResult.reason)}`,
+      );
+      vulnsByKey = new Map();
+    }
+    let depsByKey: DeprecationsByPackage;
+    if (depsResult.status === 'fulfilled') {
+      depsByKey = depsResult.value;
+    } else {
+      logger.warn(
+        `deprecation scan failed for ${project.path}: ${describeReason(depsResult.reason)}`,
+      );
+      depsByKey = new Map();
+    }
 
     // Build enriched rows for top-level packages, plus pass-through rows
     // for transitives so the user can still see them when "Show transitive"

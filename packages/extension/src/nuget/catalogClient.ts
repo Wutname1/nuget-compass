@@ -7,6 +7,7 @@ import {
   isRegistrationPage,
   pageCacheKey,
   type RegistrationIndex,
+  type RegistrationLeaf,
   type RegistrationPage,
 } from './registration.js';
 
@@ -64,7 +65,7 @@ export class NuGetCatalogClient {
   private readonly timeoutMs: number;
   private readonly maxConcurrent: number;
   private inFlight = 0;
-  private readonly waiters: Array<() => void> = [];
+  private readonly waiters: (() => void)[] = [];
   private readonly versionsCache = new Map<string, PackageVersionMetadata[]>();
 
   constructor(options: CatalogClientOptions) {
@@ -242,7 +243,7 @@ function shardOf(key: string): string {
   return /[a-z0-9]/.test(ch) ? ch : '_';
 }
 
-function leafToMetadata(leaf: import('./registration.js').RegistrationLeaf): PackageVersionMetadata {
+function leafToMetadata(leaf: RegistrationLeaf): PackageVersionMetadata {
   const ce = leaf.catalogEntry;
   const supportedFrameworks = (ce.dependencyGroups ?? [])
     .map((g) => g.targetFramework)

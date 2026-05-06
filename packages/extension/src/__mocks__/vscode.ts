@@ -41,7 +41,11 @@ export const workspace = {
 
 export const commands = {
   registerCommand(): { dispose(): void } {
-    return { dispose() {} };
+    return {
+      dispose() {
+        // no-op
+      },
+    };
   },
   executeCommand(): Promise<void> {
     return Promise.resolve();

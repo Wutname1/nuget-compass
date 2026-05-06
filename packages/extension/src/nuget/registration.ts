@@ -74,7 +74,7 @@ export interface RegistrationCatalogEntry {
 
 export interface RegistrationDependencyGroup {
   targetFramework?: string;
-  dependencies?: Array<{ id: string; range?: string }>;
+  dependencies?: { id: string; range?: string }[];
 }
 
 export function isRegistrationIndex(v: unknown): v is RegistrationIndex {

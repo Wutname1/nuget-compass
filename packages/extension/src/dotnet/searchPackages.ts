@@ -48,7 +48,7 @@ export function parseSearchResults(raw: string): SearchHit[] {
   // appear (which is normal). The SDK orders sources offline-first; we
   // reverse so the canonical entry wins.
   const byId = new Map<string, SearchHit>();
-  for (const src of [...sr].reverse()) {
+  for (const src of [...(sr as unknown[])].reverse()) {
     if (typeof src !== 'object' || src === null) continue;
     const pkgs = (src as { packages?: unknown }).packages;
     if (!Array.isArray(pkgs)) continue;
