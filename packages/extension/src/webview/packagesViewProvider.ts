@@ -365,8 +365,14 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     const summary = rows
       .map((r) => `  ${r.package.id}: ${r.package.resolvedVersion} -> ${r.newestAllowed!}`)
       .join('\n');
+
+    // The modal truncates long lists; mirror the full plan to the output
+    // channel so power users can review every change.
+    logger.info(`Update All preview for ${project.name}:\n${summary}`);
+
+    const previewLines = rows.length > 10 ? `${rows.slice(0, 10).map((r) => `  ${r.package.id}: ${r.package.resolvedVersion} -> ${r.newestAllowed!}`).join('\n')}\n  …and ${rows.length - 10} more (see "Compass: NuGet" output channel)` : summary;
     const choice = await vscode.window.showInformationMessage(
-      `Update ${rows.length} package(s) in ${project.name}?\n\n${summary}`,
+      `Update ${rows.length} package(s) in ${project.name}?\n\n${previewLines}`,
       { modal: true },
       'Update All',
     );

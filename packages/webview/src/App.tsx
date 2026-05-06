@@ -3,6 +3,7 @@ import type { HostMessage } from '@nuget-compass/shared';
 import { defaultFilterState } from '@nuget-compass/shared';
 import { vscode } from './vscode.js';
 import { reducer, initialState } from './state/reducer.js';
+import { CommonPackages } from './components/CommonPackages.js';
 import { FilterBar } from './components/FilterBar.js';
 import { ProjectList } from './components/ProjectList.js';
 import { SearchPanel } from './components/SearchPanel.js';
@@ -66,6 +67,12 @@ export function App(): JSX.Element {
           query={state.search.query}
           results={state.search.results}
           onQueryChange={(query) => dispatch({ type: 'setSearchQuery', query })}
+        />
+      ) : null}
+      {state.projects.length > 1 ? (
+        <CommonPackages
+          rowsByProject={state.rowsByProject}
+          projectNames={Object.fromEntries(state.projects.map((p) => [p.path, p.name]))}
         />
       ) : null}
       <ProjectList

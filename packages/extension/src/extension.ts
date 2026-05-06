@@ -8,6 +8,21 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const provider = new PackagesViewProvider(context);
 
+  // Debounced auto-refresh on project file changes. Multiple file events in
+  // quick succession (e.g. a save that triggers restore) coalesce into one
+  // refresh.
+  let refreshTimer: NodeJS.Timeout | undefined;
+  const scheduleRefresh = (): void => {
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => provider.refresh(), 750);
+  };
+  const watcher = vscode.workspace.createFileSystemWatcher(
+    '**/*.{csproj,fsproj,vbproj,props}',
+  );
+  watcher.onDidChange(scheduleRefresh);
+  watcher.onDidCreate(scheduleRefresh);
+  watcher.onDidDelete(scheduleRefresh);
+
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(PackagesViewProvider.viewType, provider, {
       webviewOptions: { retainContextWhenHidden: true },
@@ -21,6 +36,8 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('nuget-compass.forceRefresh', () => {
       void provider.forceRefresh();
     }),
+    watcher,
+    { dispose: () => refreshTimer && clearTimeout(refreshTimer) },
   );
 
   logger.info('NuGet Compass activated');
