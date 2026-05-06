@@ -28,7 +28,7 @@
     display: flex; align-items: center; padding: 0 12px; gap: 8px; flex-shrink: 0;
   }
   .chrome-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .chrome-title { font-size: 11px; color: #858585; margin-left: 8px; }
+  .chrome-title { font-size: 0.846rem; color: #858585; margin-left: 8px; }
   .chrome-editor-area { flex: 1; display: flex; overflow: hidden; min-height: 0; }
   .activity-bar {
     width: 46px; background: #333333;
@@ -55,7 +55,7 @@
     border-bottom: 1px solid #252526; flex-shrink: 0;
   }
   .editor-tab {
-    padding: 6px 16px; font-size: 11px; color: #858585;
+    padding: 6px 16px; font-size: 0.846rem; color: #858585;
     border-right: 1px solid #252526; background: #2d2d2d;
     white-space: nowrap; cursor: default;
   }
@@ -63,7 +63,7 @@
   .editor-code {
     flex: 1; padding: 12px 16px; overflow: hidden;
     font-family: "SF Mono", Consolas, "Courier New", monospace;
-    font-size: 10.5px; line-height: 1.7; color: #569cd6; user-select: none;
+    font-size: 0.808rem; line-height: 1.7; color: #569cd6; user-select: none;
   }
   .ec-gray { color: #6a9955; }
   .ec-yellow { color: #dcdcaa; }
@@ -86,7 +86,7 @@
   .dock-tab {
     padding: 0 14px; height: 100%;
     display: flex; align-items: center; gap: 5px;
-    font-size: 11px; color: #858585; cursor: pointer;
+    font-size: 0.846rem; color: #858585; cursor: pointer;
     border-bottom: 2px solid transparent; border-right: 1px solid #252526;
     user-select: none; white-space: nowrap;
   }
@@ -98,7 +98,7 @@
   .icon-btn {
     background: transparent; border: 1px solid transparent;
     color: #858585; padding: 2px 5px; cursor: pointer;
-    border-radius: 3px; font-size: 13px; line-height: 1.2;
+    border-radius: 3px; font-size: 1rem; line-height: 1.2;
     display: flex; align-items: center;
   }
   .icon-btn:hover { background: rgba(128,128,128,0.2); color: #cccccc; }
@@ -121,18 +121,18 @@
     padding: 8px 14px 0; border-bottom: 1px solid #2a2a2a;
     flex-shrink: 0; background: #1e1e1e;
   }
-  .detail-pkg-name { font-size: 13px; font-weight: 600; color: #cccccc; margin: 0 0 2px; }
-  .detail-pkg-sub { font-size: 10.5px; color: #858585; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .detail-pkg-name { font-size: 1rem; font-weight: 600; color: #cccccc; margin: 0 0 2px; }
+  .detail-pkg-sub { font-size: 0.808rem; color: #858585; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .detail-tabs { display: flex; gap: 0; }
   .detail-tab {
-    padding: 4px 12px; font-size: 11px; color: #858585;
+    padding: 4px 12px; font-size: 0.846rem; color: #858585;
     cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
   }
   .detail-tab:hover { color: #cccccc; }
   .detail-tab.active { color: #cccccc; border-bottom-color: #b180d7; }
   .detail-body {
     flex: 1; overflow-y: auto; overflow-x: hidden;
-    padding: 12px 14px; font-size: 11px; color: #cccccc;
+    padding: 12px 14px; font-size: 0.846rem; color: #cccccc;
   }
   .detail-body::-webkit-scrollbar { width: 8px; }
   .detail-body::-webkit-scrollbar-track { background: transparent; }
@@ -142,7 +142,7 @@
     height: 100%; gap: 8px; color: #525252;
   }
   .detail-empty svg { opacity: 0.25; }
-  .detail-empty span { font-size: 11px; }
+  .detail-empty span { font-size: 0.846rem; }
 
   .panel { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 
@@ -152,7 +152,7 @@
     background: #252526; flex-shrink: 0;
   }
   .app-header h1 {
-    font-size: 11px; font-weight: 700; margin: 0;
+    font-size: 0.846rem; font-weight: 700; margin: 0;
     letter-spacing: 0.02em; color: #bbbbbb; text-transform: uppercase;
     display: flex; align-items: center; gap: 6px;
   }
@@ -166,12 +166,12 @@
   }
   .filter-label, .filter-label-cb {
     display: inline-flex; align-items: center;
-    gap: 4px; font-size: 11px; color: #cccccc; cursor: pointer;
+    gap: 4px; font-size: 0.846rem; color: #cccccc; cursor: pointer;
   }
   .filter-label select {
     background: #3c3c3c; color: #cccccc;
     border: 1px solid #3c3c3c; padding: 1px 4px;
-    font-size: 11px; font-family: inherit; cursor: pointer;
+    font-size: 0.846rem; font-family: inherit; cursor: pointer;
   }
   .filter-label select:focus { outline: 1px solid #007fd4; }
   input[type="checkbox"] { accent-color: #3794ff; cursor: pointer; }
@@ -183,7 +183,7 @@
   }
   .seg-btn {
     background: transparent; border: none;
-    color: #858585; font-size: 10.5px;
+    color: #858585; font-size: 0.808rem;
     font-family: inherit; padding: 2px 9px;
     cursor: pointer; border-radius: 2px;
     display: inline-flex; align-items: center; gap: 4px;
@@ -197,7 +197,7 @@
     background: #252526; flex-shrink: 0;
   }
   .inner-tab {
-    padding: 5px 10px; font-size: 10.5px;
+    padding: 5px 10px; font-size: 0.808rem;
     color: #858585; cursor: pointer;
     border-bottom: 2px solid transparent; white-space: nowrap;
     background: transparent; border-top: none; border-left: none; border-right: none;
@@ -207,7 +207,7 @@
   .inner-tab:hover { color: #cccccc; }
   .inner-tab.active { color: #cccccc; border-bottom-color: #b180d7; }
   .inner-tab .pill {
-    font-size: 9px; padding: 0 5px; border-radius: 8px;
+    font-size: 0.692rem; padding: 0 5px; border-radius: 8px;
     background: rgba(55,148,255,0.14); color: #3794ff;
     font-weight: 500;
   }
@@ -227,9 +227,9 @@
   }
   .search-box input {
     background: transparent; border: none; outline: none;
-    color: #cccccc; font-size: 11px; flex: 1; font-family: inherit;
+    color: #cccccc; font-size: 0.846rem; flex: 1; font-family: inherit;
   }
-  .search-box .search-meta { font-size: 9.5px; color: #525252; }
+  .search-box .search-meta { font-size: 0.731rem; color: #525252; }
 
   /* By-package consolidated rows */
   .pkg-row {
@@ -240,7 +240,7 @@
     padding: 5px 10px 5px 10px;
     border-bottom: 1px solid #232323;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 0.846rem;
     position: relative;
   }
   .pkg-row:hover { background: rgba(255,255,255,0.03); }
@@ -275,7 +275,7 @@
     border: 1px solid rgba(128,128,128,0.14);
     border-radius: 9px;
     padding: 0px 6px 0px 5px;
-    font-size: 9.5px; color: #9a9a9a;
+    font-size: 0.731rem; color: #9a9a9a;
     line-height: 16px;
     max-width: 100%;
   }
@@ -286,7 +286,7 @@
   .proj-chip .pc-ver {
     color: #cccccc;
     font-family: "SF Mono", Consolas, monospace;
-    font-size: 9.5px; font-variant-numeric: tabular-nums;
+    font-size: 0.731rem; font-variant-numeric: tabular-nums;
   }
   .proj-chip.has-update {
     border-color: rgba(55,148,255,0.32);
@@ -302,7 +302,7 @@
   .proj-chip.has-vuln .proj-chip-dot { background: #f14c4c; }
   .pkg-divergent-warn {
     display: inline-flex; align-items: center;
-    font-size: 9px; color: #cca700;
+    font-size: 0.692rem; color: #cca700;
     background: rgba(204,167,0,0.08);
     border: 1px solid rgba(204,167,0,0.18);
     padding: 0 5px; border-radius: 8px;
@@ -319,19 +319,19 @@
   }
   .pkg-target-line {
     display: flex; align-items: center; gap: 6px;
-    font-size: 10.5px; font-family: "SF Mono", Consolas, monospace;
+    font-size: 0.808rem; font-family: "SF Mono", Consolas, monospace;
   }
   .pkg-target-current { color: #cccccc; }
   .pkg-target-current.divergent { color: #cca700; }
   .pkg-target-arrow { color: #3794ff; }
   .pkg-target-meta {
-    font-size: 9px; color: #707070;
+    font-size: 0.692rem; color: #707070;
     display: flex; align-items: center; gap: 4px;
   }
   .pkg-target-meta .meta-count {
     background: rgba(128,128,128,0.10);
     padding: 0 4px; border-radius: 6px;
-    font-size: 9px;
+    font-size: 0.692rem;
   }
 
   /* Group header row (project / category) */
@@ -341,26 +341,26 @@
     background: #252526;
     border-top: 1px solid #2a2a2a;
     border-bottom: 1px solid #2a2a2a;
-    font-size: 10.5px; color: #b0b0b0; font-weight: 600;
+    font-size: 0.808rem; color: #b0b0b0; font-weight: 600;
     cursor: pointer; user-select: none;
     position: sticky; top: 0;
     z-index: 5;
   }
   .group-chevron {
-    font-size: 9px; color: #858585; transition: transform 0.15s;
+    font-size: 0.692rem; color: #858585; transition: transform 0.15s;
     flex-shrink: 0;
   }
   .group-chevron.open { transform: rotate(90deg); }
   .group-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .group-tfm {
-    font-size: 9.5px; color: #858585; font-weight: 400;
+    font-size: 0.731rem; color: #858585; font-weight: 400;
     background: rgba(128,128,128,0.10);
     padding: 0 5px; border-radius: 8px;
     line-height: 14px;
   }
   .group-meta {
     display: inline-flex; align-items: center; gap: 6px;
-    font-size: 9.5px; color: #858585; font-weight: 400;
+    font-size: 0.731rem; color: #858585; font-weight: 400;
   }
   .group-meta .pip {
     display: inline-flex; align-items: center; gap: 3px;
@@ -373,7 +373,7 @@
   .cat-header {
     display: flex; align-items: center; gap: 6px;
     padding: 4px 10px 3px;
-    font-size: 9.5px; letter-spacing: 0.08em;
+    font-size: 0.731rem; letter-spacing: 0.08em;
     text-transform: uppercase; color: #707070;
     background: #1e1e1e;
     border-top: 1px solid #2a2a2a;
@@ -384,7 +384,7 @@
     color: #858585;
     background: rgba(128,128,128,0.12);
     padding: 0 5px; border-radius: 8px;
-    font-size: 9px;
+    font-size: 0.692rem;
     letter-spacing: 0;
   }
   .cat-header .cat-spacer { flex: 1; }
@@ -393,7 +393,7 @@
   .badge {
     display: inline-flex; align-items: center; gap: 2px;
     padding: 0px 5px; border-radius: 9px;
-    font-size: 9px; font-weight: 500; border: 1px solid transparent;
+    font-size: 0.692rem; font-weight: 500; border: 1px solid transparent;
     white-space: nowrap; line-height: 14px;
   }
   .b-update    { color: #3794ff; background: rgba(55,148,255,0.1); border-color: rgba(55,148,255,0.2); }
@@ -417,7 +417,7 @@
     padding: 5px 10px;
     background: #252526;
     border-bottom: 1px solid #2a2a2a;
-    font-size: 9.5px; color: #707070;
+    font-size: 0.731rem; color: #707070;
     text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
   }
   .matrix-head .mh-action { text-align: right; }
@@ -427,18 +427,18 @@
     gap: 8px; align-items: center;
     padding: 4px 10px;
     border-bottom: 1px solid #232323;
-    font-size: 11px;
+    font-size: 0.846rem;
   }
   .matrix-row:last-child { border-bottom: none; }
   .matrix-row:hover { background: rgba(255,255,255,0.025); }
   .matrix-proj { color: #cccccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; gap: 6px; align-items: baseline; }
-  .matrix-proj .mt-tfm { font-size: 9.5px; color: #707070; }
-  .matrix-cur { font-family: "SF Mono", Consolas, monospace; color: #cccccc; font-size: 10.5px; font-variant-numeric: tabular-nums; }
-  .matrix-arrow { color: #3794ff; font-size: 10.5px; font-family: "SF Mono", Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .matrix-proj .mt-tfm { font-size: 0.731rem; color: #707070; }
+  .matrix-cur { font-family: "SF Mono", Consolas, monospace; color: #cccccc; font-size: 0.808rem; font-variant-numeric: tabular-nums; }
+  .matrix-arrow { color: #3794ff; font-size: 0.808rem; font-family: "SF Mono", Consolas, monospace; font-variant-numeric: tabular-nums; }
   .matrix-arrow.dim { color: #444; }
   .matrix-action button {
     background: #0e639c; color: #fff; border: none; border-radius: 2px;
-    padding: 2px 8px; font-size: 10px; cursor: pointer; font-family: inherit;
+    padding: 2px 8px; font-size: 0.769rem; cursor: pointer; font-family: inherit;
   }
   .matrix-action button:hover { background: #1177bb; }
   .matrix-action button:disabled { background: #2a2a2a; color: #555; cursor: default; }
@@ -447,23 +447,23 @@
     padding: 5px 10px;
     background: #1c1c1c;
     border-bottom: 1px solid #2a2a2a;
-    font-size: 11px;
+    font-size: 0.846rem;
   }
   .matrix-bulk .ver-input {
     background: #1e1e1e; border: 1px solid #3c3c3c; color: #cccccc;
-    font-size: 10.5px; padding: 1px 6px; border-radius: 2px;
+    font-size: 0.808rem; padding: 1px 6px; border-radius: 2px;
     font-family: "SF Mono", Consolas, monospace;
     width: 110px;
   }
   .matrix-bulk button {
     background: #0e639c; color: #fff; border: none; border-radius: 2px;
-    padding: 2px 10px; font-size: 10.5px; cursor: pointer; font-family: inherit;
+    padding: 2px 10px; font-size: 0.808rem; cursor: pointer; font-family: inherit;
     margin-left: auto;
   }
   .matrix-bulk button:hover { background: #1177bb; }
 
   /* Detail meta */
-  .desc-meta { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 11px; margin-bottom: 12px; }
+  .desc-meta { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 0.846rem; margin-bottom: 12px; }
   .desc-meta-label { color: #525252; white-space: nowrap; }
   .desc-meta-value { color: #9d9d9d; }
   .desc-meta-value a { color: #3794ff; text-decoration: none; }
@@ -471,7 +471,7 @@
 
   /* Banner */
   .banner {
-    padding: 5px 10px; font-size: 11px;
+    padding: 5px 10px; font-size: 0.846rem;
     border-bottom: 1px solid transparent;
     display: flex; align-items: flex-start; gap: 6px;
   }
@@ -491,8 +491,8 @@
     display: flex; flex-direction: column; align-items: center; gap: 8px;
   }
   .empty-icon { opacity: 0.35; margin-bottom: 4px; }
-  .empty-title { font-size: 12px; color: #cccccc; }
-  .empty-sub { font-size: 11px; color: #858585; }
+  .empty-title { font-size: 0.923rem; color: #cccccc; }
+  .empty-sub { font-size: 0.846rem; color: #858585; }
   .empty-sub code { font-family: "SF Mono", Consolas, monospace; font-size: 0.9em; background: rgba(128,128,128,0.15); padding: 0 3px; border-radius: 2px; }
 
   /* Modal */
@@ -505,12 +505,12 @@
     background: #252526; border: 1px solid #3c3c3c; border-radius: 4px;
     padding: 16px; width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   }
-  .modal-title { font-size: 12px; font-weight: 600; color: #cccccc; margin: 0 0 8px; }
-  .modal-body { font-size: 11px; color: #cccccc; margin: 0 0 16px; line-height: 1.5; }
+  .modal-title { font-size: 0.923rem; font-weight: 600; color: #cccccc; margin: 0 0 8px; }
+  .modal-body { font-size: 0.846rem; color: #cccccc; margin: 0 0 16px; line-height: 1.5; }
   .modal-body strong { color: #ffffff; }
   .modal-body code { font-family: "SF Mono", Consolas, monospace; font-size: 0.9em; background: rgba(128,128,128,0.15); padding: 0 3px; border-radius: 2px; color: #b180d7; }
   .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
-  .btn { padding: 4px 12px; border-radius: 2px; font-size: 11px; cursor: pointer; border: 1px solid transparent; font-family: inherit; }
+  .btn { padding: 4px 12px; border-radius: 2px; font-size: 0.846rem; cursor: pointer; border: 1px solid transparent; font-family: inherit; }
   .btn-cancel { background: transparent; color: #cccccc; border-color: #3c3c3c; }
   .btn-cancel:hover { background: rgba(128,128,128,0.15); }
   .btn-primary { background: #0e639c; color: #ffffff; border-color: #0e639c; }
@@ -522,7 +522,7 @@
     background: rgba(30,30,30,0.95);
     border: 1px solid rgba(137,209,133,0.3);
     border-radius: 2px; padding: 6px 10px;
-    font-size: 11px; color: #89d185;
+    font-size: 0.846rem; color: #89d185;
     display: flex; align-items: center; gap: 8px; z-index: 50;
     box-shadow: 0 2px 8px rgba(0,0,0,0.4);
   }
@@ -530,46 +530,46 @@
 
   /* README */
   .readme-content { line-height: 1.7; }
-  .readme-content h2 { font-size: 12px; font-weight: 600; color: #cccccc; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #2a2a2a; }
-  .readme-content h3 { font-size: 11.5px; font-weight: 600; color: #cccccc; margin: 10px 0 4px; }
-  .readme-content p { margin: 0 0 8px; color: #9d9d9d; font-size: 11px; }
+  .readme-content h2 { font-size: 0.923rem; font-weight: 600; color: #cccccc; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #2a2a2a; }
+  .readme-content h3 { font-size: 0.885rem; font-weight: 600; color: #cccccc; margin: 10px 0 4px; }
+  .readme-content p { margin: 0 0 8px; color: #9d9d9d; font-size: 0.846rem; }
   .readme-content code { font-family: "SF Mono", Consolas, monospace; font-size: 0.9em; background: rgba(128,128,128,0.15); padding: 1px 4px; border-radius: 2px; color: #ce9178; }
   .readme-content pre { background: #2d2d2d; border: 1px solid #3c3c3c; border-radius: 3px; padding: 8px 10px; margin: 6px 0; overflow-x: auto; }
-  .readme-content pre code { background: none; padding: 0; font-size: 10px; color: #d4d4d4; }
+  .readme-content pre code { background: none; padding: 0; font-size: 0.769rem; color: #d4d4d4; }
   .readme-content ul { margin: 4px 0 8px; padding-left: 18px; }
-  .readme-content li { color: #9d9d9d; font-size: 11px; margin-bottom: 2px; }
+  .readme-content li { color: #9d9d9d; font-size: 0.846rem; margin-bottom: 2px; }
 
   /* Versions table */
-  .ver-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  .ver-table th { text-align: left; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em; color: #525252; font-weight: 600; padding: 0 8px 6px; border-bottom: 1px solid #2a2a2a; }
+  .ver-table { width: 100%; border-collapse: collapse; font-size: 0.846rem; }
+  .ver-table th { text-align: left; font-size: 0.731rem; text-transform: uppercase; letter-spacing: 0.06em; color: #525252; font-weight: 600; padding: 0 8px 6px; border-bottom: 1px solid #2a2a2a; }
   .ver-table td { padding: 5px 8px; border-bottom: 1px solid #1a1a1a; vertical-align: middle; }
   .ver-table tr:hover td { background: rgba(255,255,255,0.03); }
   .ver-row-num { font-variant-numeric: tabular-nums; color: #cccccc; font-family: "SF Mono", Consolas, monospace; }
   .ver-row-date { color: #858585; }
   .ver-row-action button {
     background: #0e639c; color: #fff; border: none; border-radius: 2px;
-    padding: 2px 8px; font-size: 10px; cursor: pointer; font-family: inherit;
+    padding: 2px 8px; font-size: 0.769rem; cursor: pointer; font-family: inherit;
   }
   .ver-row-action button:hover { background: #1177bb; }
 
   /* Release notes */
   .rn-entry { border-bottom: 1px solid #2a2a2a; padding: 8px 0; }
   .rn-entry:last-child { border-bottom: none; }
-  .rn-ver { font-size: 11px; font-family: "SF Mono", Consolas, monospace; color: #cccccc; font-weight: 600; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }
-  .rn-date { font-size: 9.5px; color: #525252; font-weight: 400; font-family: inherit; }
+  .rn-ver { font-size: 0.846rem; font-family: "SF Mono", Consolas, monospace; color: #cccccc; font-weight: 600; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }
+  .rn-date { font-size: 0.731rem; color: #525252; font-weight: 400; font-family: inherit; }
   .rn-items { margin: 4px 0 0 0; padding-left: 16px; }
-  .rn-items li { font-size: 10.5px; color: #9d9d9d; margin-bottom: 2px; line-height: 1.5; }
+  .rn-items li { font-size: 0.808rem; color: #9d9d9d; margin-bottom: 2px; line-height: 1.5; }
 
   /* Demo panel */
   .demo-controls { width: 200px; flex-shrink: 0; align-self: flex-start; padding-top: 4px; }
-  .demo-title { font-size: 11px; font-weight: 600; color: #858585; letter-spacing: 0.07em; text-transform: uppercase; margin: 0 0 10px; }
+  .demo-title { font-size: 0.846rem; font-weight: 600; color: #858585; letter-spacing: 0.07em; text-transform: uppercase; margin: 0 0 10px; }
   .demo-section { margin-bottom: 14px; }
-  .demo-section-title { font-size: 10px; color: #525252; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
+  .demo-section-title { font-size: 0.769rem; color: #525252; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
   .demo-btn {
     display: block; width: 100%; text-align: left;
     background: #2d2d2d; border: 1px solid #3c3c3c;
     color: #858585; padding: 4px 9px; border-radius: 2px;
-    font-size: 11px; cursor: pointer; font-family: inherit; margin-bottom: 3px;
+    font-size: 0.846rem; cursor: pointer; font-family: inherit; margin-bottom: 3px;
   }
   .demo-btn:hover { background: #333; color: #cccccc; border-color: #4a4a4a; }
   .demo-btn.active { background: rgba(55,148,255,0.1); color: #3794ff; border-color: rgba(55,148,255,0.3); }
@@ -588,7 +588,7 @@
     display: grid;
     grid-template-columns: 18px 1fr auto;
     gap: 8px; align-items: center;
-    padding: 4px 10px; font-size: 11px;
+    padding: 4px 10px; font-size: 0.846rem;
     border-bottom: 1px solid #232323;
     cursor: pointer;
   }
@@ -599,7 +599,7 @@
   .cpm-row {
     display: grid; grid-template-columns: 1fr auto auto;
     gap: 8px; align-items: center; padding: 4px 10px;
-    border-bottom: 1px solid #232323; font-size: 11px;
+    border-bottom: 1px solid #232323; font-size: 0.846rem;
     cursor: pointer;
   }
   .cpm-row:hover { background: rgba(255,255,255,0.03); }
@@ -611,7 +611,7 @@
     border: 1px solid rgba(204,167,0,0.2);
     border-radius: 3px;
     padding: 5px 8px;
-    font-size: 10.5px; color: #cca700;
+    font-size: 0.808rem; color: #cca700;
     margin-bottom: 12px;
     line-height: 1.5;
     display: flex; gap: 6px; align-items: flex-start;
@@ -1007,7 +1007,7 @@ function CategorySection({ cat, items, selected, onSelect }) {
         <span>{CAT_LABEL[cat]}</span>
         <span className="cat-count">{items.length}</span>
         <span className="cat-spacer"></span>
-        {cat === 'outdated' && <span style={{fontSize:9.5,color:'#3794ff',textTransform:'none',letterSpacing:0}}>Update all ↑</span>}
+        {cat === 'outdated' && <span style={{fontSize:'0.731rem',color:'#3794ff',textTransform:'none',letterSpacing:0}}>Update all ↑</span>}
       </div>
       {open && items.map(pkg => (
         <ByPackageRow key={pkg.id} pkg={pkg}
@@ -1121,8 +1121,8 @@ function ProjectsTab({ pkg, onUpdate, onMatchVersions }) {
         <div className="matrix-bulk">
           <span style={{color:'#cccccc'}}>Set all to</span>
           <input className="ver-input" value={target} onChange={e => setTarget(e.target.value)} />
-          <span style={{color:'#707070',fontSize:10}}>·</span>
-          <span style={{fontSize:10,color:'#858585'}}>{selected.size} of {installs.length} selected</span>
+          <span style={{color:'#707070',fontSize:'0.769rem'}}>·</span>
+          <span style={{fontSize:'0.769rem',color:'#858585'}}>{selected.size} of {installs.length} selected</span>
           <button onClick={() => onMatchVersions && onMatchVersions(pkg.id, target, [...selected])}
                   disabled={eligibleCount === 0}
                   style={{opacity: eligibleCount === 0 ? 0.4 : 1}}>
@@ -1146,7 +1146,7 @@ function ProjectsTab({ pkg, onUpdate, onMatchVersions }) {
               <span className="matrix-proj">
                 {proj.name}
                 <span className="mt-tfm">{proj.tfm}</span>
-                {inst.vuln && <span className="badge b-vuln" style={{fontSize:8.5}}>⚠ {inst.vuln}</span>}
+                {inst.vuln && <span className="badge b-vuln" style={{fontSize:'0.654rem'}}>⚠ {inst.vuln}</span>}
               </span>
               <span className="matrix-cur">{inst.cur}</span>
               <span className={`matrix-arrow${wouldChange ? '' : ' dim'}`}>
@@ -1155,7 +1155,7 @@ function ProjectsTab({ pkg, onUpdate, onMatchVersions }) {
               <span className="matrix-action" style={{textAlign:'right'}}>
                 {wouldChange
                   ? <button onClick={() => onUpdate(pkg.id, target, [inst.projectId])}>Update</button>
-                  : <span style={{color:'#525252',fontSize:10}}>up to date</span>}
+                  : <span style={{color:'#525252',fontSize:'0.769rem'}}>up to date</span>}
               </span>
             </div>
           );
@@ -1187,7 +1187,7 @@ function DescriptionTab({ pkg, detail }) {
           <span><strong style={{color:'#f14c4c'}}>{detail.vulnerability.severity} severity — {detail.vulnerability.cve}.</strong> Fixed in <code style={{background:'rgba(0,0,0,0.3)',padding:'0 4px',borderRadius:2}}>{detail.vulnerability.fixed}</code>. {detail.vulnerability.notes}</span>
         </div>
       )}
-      <p style={{color:'#9d9d9d',fontSize:11,lineHeight:1.7,margin:'0 0 12px'}}>{detail.description}</p>
+      <p style={{color:'#9d9d9d',fontSize:'0.846rem',lineHeight:1.7,margin:'0 0 12px'}}>{detail.description}</p>
       <div className="desc-meta">
         <span className="desc-meta-label">Authors</span>
         <span className="desc-meta-value">{detail.authors}</span>
@@ -1203,7 +1203,7 @@ function DescriptionTab({ pkg, detail }) {
 }
 
 function ReleaseNotesTab({ detail }) {
-  if (!detail.releaseNotes?.length) return <div style={{color:'#525252',fontSize:11}}>No release notes available.</div>;
+  if (!detail.releaseNotes?.length) return <div style={{color:'#525252',fontSize:'0.846rem'}}>No release notes available.</div>;
   return (
     <div>
       {detail.releaseNotes.map((rel) => (
@@ -1255,7 +1255,7 @@ function AddToProjectsTab({ pkg }) {
   const target = pkg.latest || '1.0.0';
   return (
     <div>
-      <p style={{color:'#9d9d9d',fontSize:11,margin:'0 0 10px'}}>Pick projects to add <strong style={{color:'#ccc'}}>{pkg.id}</strong> <code style={{color:'#b180d7'}}>{target}</code> to:</p>
+      <p style={{color:'#9d9d9d',fontSize:'0.846rem',margin:'0 0 10px'}}>Pick projects to add <strong style={{color:'#ccc'}}>{pkg.id}</strong> <code style={{color:'#b180d7'}}>{target}</code> to:</p>
       <div className="matrix">
         <div className="matrix-head" style={{gridTemplateColumns:'22px 1fr auto'}}>
           <span></span><span>Project</span><span>Framework</span>
@@ -1264,11 +1264,11 @@ function AddToProjectsTab({ pkg }) {
           <div key={proj.id} className="matrix-row" style={{gridTemplateColumns:'22px 1fr auto'}}>
             <input type="checkbox" checked={selected.has(proj.id)} onChange={() => toggle(proj.id)} />
             <span className="matrix-proj">{proj.name}</span>
-            <span className="mt-tfm" style={{fontSize:10}}>{proj.tfm}</span>
+            <span className="mt-tfm" style={{fontSize:'0.769rem'}}>{proj.tfm}</span>
           </div>
         ))}
       </div>
-      <button style={{background:'#0e639c',color:'#fff',border:'none',borderRadius:2,padding:'4px 14px',fontSize:11,marginTop:10,cursor:'pointer',fontFamily:'inherit'}}
+      <button style={{background:'#0e639c',color:'#fff',border:'none',borderRadius:2,padding:'4px 14px',fontSize:'0.846rem',marginTop:10,cursor:'pointer',fontFamily:'inherit'}}
               disabled={selected.size===0}>
         Add to {selected.size} {selected.size === 1 ? 'project' : 'projects'}
       </button>
@@ -1303,14 +1303,14 @@ function BrowsePanel({ query, setQuery, selected, onSelect }) {
                onClick={() => onSelect(synth)}>
             <div>
               <div style={{display:'flex',alignItems:'baseline',gap:6,marginBottom:2}}>
-                <span style={{fontSize:11,color:'#cccccc',fontWeight:500}}>{r.id}</span>
-                <span style={{fontSize:10,color:'#858585'}}>{r.latest}</span>
-                <span style={{fontSize:9.5,color:'#525252'}}>{r.downloads} dls</span>
+                <span style={{fontSize:'0.846rem',color:'#cccccc',fontWeight:500}}>{r.id}</span>
+                <span style={{fontSize:'0.769rem',color:'#858585'}}>{r.latest}</span>
+                <span style={{fontSize:'0.731rem',color:'#525252'}}>{r.downloads} dls</span>
               </div>
-              <div style={{fontSize:10,color:'#858585',lineHeight:1.4,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{r.desc}</div>
+              <div style={{fontSize:'0.769rem',color:'#858585',lineHeight:1.4,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{r.desc}</div>
             </div>
             <div>
-              <button style={{background:'#0e639c',color:'#fff',border:'none',borderRadius:2,padding:'2px 8px',fontSize:10,cursor:'pointer',fontFamily:'inherit'}}>+ Add</button>
+              <button style={{background:'#0e639c',color:'#fff',border:'none',borderRadius:2,padding:'2px 8px',fontSize:'0.769rem',cursor:'pointer',fontFamily:'inherit'}}>+ Add</button>
             </div>
           </div>
         );
@@ -1330,9 +1330,9 @@ function UpdatesPanel({ selected, onSelect }) {
     <div>
       <div style={{display:'flex',alignItems:'center',gap:8,padding:'5px 10px',borderBottom:'1px solid #2a2a2a',background:'#252526'}}>
         <input type="checkbox" checked={checked.size === updatable.length} onChange={e => setChecked(e.target.checked ? new Set(updatable.map(p => p.id)) : new Set())} />
-        <span style={{fontSize:10.5,color:'#cccccc'}}>Select all</span>
-        <span style={{fontSize:10,color:'#858585',marginLeft:'auto'}}>{checked.size} of {updatable.length}</span>
-        <button style={{background:checked.size?'#0e639c':'#2a2a2a',color:checked.size?'#fff':'#555',border:'none',borderRadius:2,padding:'2px 10px',fontSize:11,cursor:checked.size?'pointer':'default',fontFamily:'inherit'}}
+        <span style={{fontSize:'0.808rem',color:'#cccccc'}}>Select all</span>
+        <span style={{fontSize:'0.769rem',color:'#858585',marginLeft:'auto'}}>{checked.size} of {updatable.length}</span>
+        <button style={{background:checked.size?'#0e639c':'#2a2a2a',color:checked.size?'#fff':'#555',border:'none',borderRadius:2,padding:'2px 10px',fontSize:'0.846rem',cursor:checked.size?'pointer':'default',fontFamily:'inherit'}}
                 disabled={!checked.size}>Update</button>
       </div>
       {updatable.map(pkg => {
@@ -1349,7 +1349,7 @@ function UpdatesPanel({ selected, onSelect }) {
               </div>
               <div style={{display:'flex',gap:3,flexWrap:'wrap'}}>
                 {updProjects.map(i => (
-                  <span key={i.projectId} className="proj-chip has-update" style={{fontSize:9}}>
+                  <span key={i.projectId} className="proj-chip has-update" style={{fontSize:'0.692rem'}}>
                     <span className="proj-chip-dot"></span>
                     <span className="pc-name">{PROJECT_BY_ID[i.projectId].name}</span>
                     <span className="pc-ver">{i.cur}</span>
@@ -1357,7 +1357,7 @@ function UpdatesPanel({ selected, onSelect }) {
                 ))}
               </div>
             </div>
-            <span style={{fontSize:10.5,color:'#3794ff',fontFamily:'SF Mono,Consolas,monospace',fontVariantNumeric:'tabular-nums'}}>→ {pkg.latest}</span>
+            <span style={{fontSize:'0.808rem',color:'#3794ff',fontFamily:'SF Mono,Consolas,monospace',fontVariantNumeric:'tabular-nums'}}>→ {pkg.latest}</span>
           </div>
         );
       })}
@@ -1369,18 +1369,18 @@ function CpmPanel({ selected, onSelect }) {
   const packages = aggregatePackages(false);
   return (
     <div>
-      <div style={{padding:'5px 10px',background:'rgba(177,128,215,0.06)',borderBottom:'1px solid rgba(177,128,215,0.15)',fontSize:10.5,color:'#b180d7',display:'flex',alignItems:'flex-start',gap:6}}>
+      <div style={{padding:'5px 10px',background:'rgba(177,128,215,0.06)',borderBottom:'1px solid rgba(177,128,215,0.15)',fontSize:'0.808rem',color:'#b180d7',display:'flex',alignItems:'flex-start',gap:6}}>
         <span style={{flexShrink:0}}>📦</span>
         <span>Central Package Management — versions pinned in <code style={{fontFamily:'SF Mono,Consolas,monospace',fontSize:'0.9em',background:'rgba(128,128,128,0.15)',padding:'0 3px',borderRadius:2}}>Directory.Packages.props</code></span>
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr auto auto',gap:8,padding:'4px 10px',borderBottom:'1px solid #2a2a2a',fontSize:9.5,color:'#525252',fontWeight:600,letterSpacing:'0.04em',textTransform:'uppercase'}}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr auto auto',gap:8,padding:'4px 10px',borderBottom:'1px solid #2a2a2a',fontSize:'0.731rem',color:'#525252',fontWeight:600,letterSpacing:'0.04em',textTransform:'uppercase'}}>
         <span>Package</span><span>Pinned</span><span>Used by</span>
       </div>
       {packages.map(pkg => (
         <div key={pkg.id} className={`cpm-row${selected?.id === pkg.id ? ' selected' : ''}`} onClick={() => onSelect(pkg)}>
           <span style={{color:'#cccccc',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pkg.id}</span>
-          <span style={{color:'#b180d7',fontVariantNumeric:'tabular-nums',fontSize:10.5,fontFamily:'SF Mono,Consolas,monospace'}}>{pkg.latest || pkg.versions[0]}</span>
-          <span style={{fontSize:9.5,color:'#858585'}}>{pkg.installs.length} {pkg.installs.length === 1 ? 'project' : 'projects'}</span>
+          <span style={{color:'#b180d7',fontVariantNumeric:'tabular-nums',fontSize:'0.808rem',fontFamily:'SF Mono,Consolas,monospace'}}>{pkg.latest || pkg.versions[0]}</span>
+          <span style={{fontSize:'0.731rem',color:'#858585'}}>{pkg.installs.length} {pkg.installs.length === 1 ? 'project' : 'projects'}</span>
         </div>
       ))}
     </div>
@@ -1429,7 +1429,7 @@ function AppPanel({ tab, setTab, selected, onSelect, onUpdate, onMatchVersions }
         </button>
         <div style={{flex:1}}></div>
         <span title="Central Package Management active — versions pinned in Directory.Packages.props"
-              style={{display:'inline-flex',alignItems:'center',gap:4,padding:'0 10px',fontSize:10,color:'#b180d7',cursor:'pointer'}}>
+              style={{display:'inline-flex',alignItems:'center',gap:4,padding:'0 10px',fontSize:'0.769rem',color:'#b180d7',cursor:'pointer'}}>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           CPM
         </span>
@@ -1573,8 +1573,8 @@ function VSCodeChrome({ tab, setTab, selected, onSelect }) {
           <div className="dock-tab" style={{color:'#525252',cursor:'default'}}>Problems</div>
           <div className="dock-drag-handle"></div>
           <div className="dock-actions">
-            <button className="icon-btn" title="Maximize" style={{fontSize:11}}>⬡</button>
-            <button className="icon-btn" title="Close" style={{fontSize:11}}>✕</button>
+            <button className="icon-btn" title="Maximize" style={{fontSize:'0.846rem'}}>⬡</button>
+            <button className="icon-btn" title="Close" style={{fontSize:'0.846rem'}}>✕</button>
           </div>
         </div>
         <div className="dock-body" style={{position:'relative'}}>
@@ -1592,7 +1592,7 @@ function VSCodeChrome({ tab, setTab, selected, onSelect }) {
                 <p className="modal-body">
                   Update <strong>{modal.pkgId}</strong> to <code>{modal.version}</code> in:
                 </p>
-                <ul style={{margin:'-8px 0 14px 0',paddingLeft:18,fontSize:11,color:'#9d9d9d'}}>
+                <ul style={{margin:'-8px 0 14px 0',paddingLeft:18,fontSize:'0.846rem',color:'#9d9d9d'}}>
                   {(modal.projectIds || []).map(pid => (
                     <li key={pid} style={{padding:'2px 0'}}>{PROJECT_BY_ID[pid]?.name}</li>
                   ))}
@@ -1644,7 +1644,7 @@ function DemoControls({ tab, setTab, selected, onSelectPkg }) {
       </div>
       <div className="demo-section">
         <div className="demo-section-title">What's new</div>
-        <div style={{fontSize:10,color:'#707070',lineHeight:1.7}}>
+        <div style={{fontSize:'0.769rem',color:'#707070',lineHeight:1.7}}>
           • <strong style={{color:'#bbb'}}>By package</strong> default<br/>
           • Per-project version chips inline<br/>
           • Drift warning when versions diverge<br/>

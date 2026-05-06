@@ -403,7 +403,7 @@ function ProjectsRow({
         {install.vulnerability && install.vulnerability.length > 0 ? (
           <span
             className="badge badge-vuln"
-            style={{ fontSize: 'calc(8.5px * var(--ngc-font-scale))' }}
+            style={{ fontSize: '0.654rem' }}
             title="Has a known security problem in this project. Update to a fixed version."
           >
             ⚠
@@ -429,7 +429,7 @@ function ProjectsRow({
             Update
           </button>
         ) : (
-          <span className="muted" style={{ fontSize: 'calc(10px * var(--ngc-font-scale))' }}>
+          <span className="muted" style={{ fontSize: '0.769rem' }}>
             up to date
           </span>
         )}

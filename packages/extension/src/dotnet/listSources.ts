@@ -10,8 +10,16 @@ export interface NuGetSource {
  * Run `dotnet nuget list source` and parse the human-readable output.
  * The CLI does not offer JSON; we parse the "Registered Sources:" section.
  */
-export async function listSources(cwd: string): Promise<NuGetSource[]> {
-  const result = await runDotnet(['nuget', 'list', 'source', '--format', 'detailed'], cwd);
+export async function listSources(
+  cwd: string,
+  extraEnv?: Record<string, string>,
+): Promise<NuGetSource[]> {
+  const result = await runDotnet(
+    ['nuget', 'list', 'source', '--format', 'detailed'],
+    cwd,
+    30_000,
+    extraEnv,
+  );
   if (result.code !== 0) return [];
   return parseDetailedOutput(result.stdout);
 }

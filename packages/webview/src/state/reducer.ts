@@ -54,7 +54,19 @@ export interface AppState {
   status: 'idle' | 'scanning' | 'fetching';
   error?: { message: string; detail?: string };
   search: { query: string; results: SearchHit[]; visible: boolean };
-  sources: Array<{ name: string; url: string; enabled: boolean }>;
+  sources: Array<{
+    name: string;
+    url: string;
+    enabled: boolean;
+    credentialStore?: 'nuget-config' | 'vscode-secrets' | 'none';
+    authFailed?: boolean;
+  }>;
+  /** Pending re-auth prompt triggered by host:sourceAuthRequired. */
+  authPrompt?: {
+    name: string;
+    url: string;
+    credentialStore?: 'nuget-config' | 'vscode-secrets' | 'none';
+  };
   /** README body keyed by `${packageId}@${version}`. */
   readmes: Record<string, ReadmeState>;
   /** Active top-level tab: Installed / Browse / Updates. */
@@ -98,7 +110,8 @@ export type Action =
   | { type: 'setGroupBy'; groupBy: GroupBy }
   | { type: 'setFilterQuery'; query: string }
   | { type: 'showToast'; toast: Toast }
-  | { type: 'dismissToast' };
+  | { type: 'dismissToast' }
+  | { type: 'dismissAuthPrompt' };
 
 export function packageKey(projectPath: string, packageId: string): string {
   return `${projectPath}::${packageId}`;
@@ -134,6 +147,8 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, toast: action.toast };
     case 'dismissToast':
       return { ...state, toast: undefined };
+    case 'dismissAuthPrompt':
+      return { ...state, authPrompt: undefined };
     case 'host':
       return applyHostMessage(state, action.message);
   }
@@ -185,6 +200,15 @@ function applyHostMessage(state: AppState, msg: HostMessage): AppState {
       return { ...state, search: { ...state.search, query: msg.query, results: msg.results } };
     case 'host:sources':
       return { ...state, sources: msg.sources };
+    case 'host:sourceAuthRequired':
+      return {
+        ...state,
+        authPrompt: {
+          name: msg.name,
+          url: msg.url,
+          credentialStore: msg.credentialStore,
+        },
+      };
     case 'host:readme':
       return {
         ...state,

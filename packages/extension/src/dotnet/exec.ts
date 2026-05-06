@@ -35,13 +35,22 @@ export class DotnetTimeoutError extends Error {
  * decides whether the failure is recoverable (e.g. a project with a
  * NuGet error still produces parseable JSON for other projects).
  */
-export function runDotnet(args: string[], cwd: string, timeoutMs = 30_000): Promise<DotnetResult> {
+export function runDotnet(
+  args: string[],
+  cwd: string,
+  timeoutMs = 30_000,
+  extraEnv?: Record<string, string>,
+): Promise<DotnetResult> {
   const exe = resolveDotnetPath();
 
   return new Promise((resolve, reject) => {
     logger.trace(`spawn: ${exe} ${args.join(' ')} (cwd=${cwd})`);
 
-    const child = spawn(exe, args, { cwd, shell: false });
+    const env =
+      extraEnv && Object.keys(extraEnv).length > 0
+        ? { ...process.env, ...extraEnv }
+        : undefined;
+    const child = spawn(exe, args, { cwd, shell: false, env });
     let stdout = '';
     let stderr = '';
     let timedOut = false;

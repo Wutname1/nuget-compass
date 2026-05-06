@@ -16,6 +16,7 @@ import { StatusBanner } from './components/StatusBanner.js';
 import { SourcesPanel } from './components/SourcesPanel.js';
 import { Toast } from './components/Toast.js';
 import { ConfirmUpdateModal } from './components/ConfirmUpdateModal.js';
+import { AddSourceModal } from './components/AddSourceModal.js';
 import {
   CompassIcon,
   SearchIcon,
@@ -409,6 +410,17 @@ export function App(): JSX.Element {
         onCancel={() => setPendingUpdate(undefined)}
         onConfirm={confirmUpdate}
       />
+
+      {state.authPrompt ? (
+        <AddSourceModal
+          reauthFor={{
+            name: state.authPrompt.name,
+            url: state.authPrompt.url,
+            credentialStore: state.authPrompt.credentialStore,
+          }}
+          onClose={() => dispatch({ type: 'dismissAuthPrompt' })}
+        />
+      ) : null}
 
       <Toast toast={state.toast} onDismiss={() => dispatch({ type: 'dismissToast' })} />
     </div>

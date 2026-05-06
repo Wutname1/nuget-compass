@@ -26,19 +26,30 @@ import {
   enableSource,
   disableSource,
 } from '../dotnet/sources.js';
+import { CredentialVault } from '../dotnet/credentialVault.js';
 
 export class PackagesViewProvider implements vscode.WebviewViewProvider {
   static readonly viewType = 'nuget-compass.packages';
 
   private view: vscode.WebviewView | undefined;
   private readonly catalog: NuGetCatalogClient;
+  private readonly vault: CredentialVault;
   /** Last scan result, kept so expand handlers can find the project for a path. */
   private lastProjects: Project[] = [];
   /** Rows produced by the most recent enrichment, per project path. Drives Update All. */
   private readonly lastRowsByProject = new Map<string, PackageRow[]>();
+  /** Last sources surfaced to the webview, with auth-failure flags. */
+  private lastSources: {
+    name: string;
+    url: string;
+    enabled: boolean;
+    credentialStore: 'nuget-config' | 'vscode-secrets' | 'none';
+    authFailed?: boolean;
+  }[] = [];
 
   constructor(private readonly context: vscode.ExtensionContext) {
     this.catalog = createCatalogClient(context);
+    this.vault = new CredentialVault(context.secrets);
   }
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -76,21 +87,22 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     this.post({ type: 'host:status', status: 'scanning' });
     const filters = this.loadFilters();
     try {
+      // Resolve the current source list first so we know which env vars to
+      // inject (SecretStorage credentials feed in via NuGetPackageSourceCredentials_<NAME>).
+      const cwdProbe = this.probeCwd();
+      const sources = cwdProbe ? await listSources(cwdProbe) : [];
+      const extraEnv = await this.vault.buildEnv(sources.map((s) => s.name));
+
       // Always fetch transitives. The webview filters them per the user's
       // current "Show transitive" toggle without needing a refetch.
-      const result = await scanWorkspace({ includeTransitive: true });
+      const result = await scanWorkspace({ includeTransitive: true, extraEnv });
       this.lastProjects = result.projects;
       this.lastRowsByProject.clear();
       this.post({ type: 'host:projects', projects: result.projects });
 
-      // Surface NuGet sources alongside the project list. Best-effort; if it
-      // fails (e.g. dotnet missing) we already showed a banner during scan.
-      const cwd = result.projects[0] ? path.dirname(result.projects[0].path) : undefined;
-      if (cwd) {
-        listSources(cwd)
-          .then((sources) => this.post({ type: 'host:sources', sources }))
-          .catch((err: unknown) => logger.warn(`listSources failed: ${describeReason(err)}`));
-      }
+      // Surface NuGet sources alongside the project list, decorated with
+      // credential-store info and any auth failures we sniffed from the scan.
+      await this.publishSources(sources, result.rawOutputs);
 
       // First paint: send all rows including transitive. The webview filters
       // them in-memory per the user's current "Show transitive" toggle.
@@ -324,7 +336,14 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         void this.installPackage(msg.projectPath, msg.packageId, msg.version);
         return;
       case 'view:addSource':
-        void this.handleAddSource(msg.name, msg.url, msg.username, msg.password);
+        void this.handleAddSource(
+          msg.name,
+          msg.url,
+          msg.username,
+          msg.password,
+          msg.credentialStore ?? 'nuget-config',
+          Boolean(msg.reauth),
+        );
         return;
       case 'view:removeSource':
         void this.handleRemoveSource(msg.name);
@@ -596,14 +615,26 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   private async handleAddSource(
     name: string,
     url: string,
-    username?: string,
-    password?: string,
+    username: string | undefined,
+    password: string | undefined,
+    credentialStore: 'nuget-config' | 'vscode-secrets',
+    reauth: boolean,
   ): Promise<void> {
     const cwd = this.firstProjectCwd() ?? process.cwd();
+
+    // Re-auth replaces any existing entry for the same name first.
+    if (reauth) {
+      await removeSource(cwd, name);
+      await this.vault.delete(name);
+    }
+
+    const useSecrets = credentialStore === 'vscode-secrets' && Boolean(password);
+    // For SecretStorage: register the source without a password in nuget.config;
+    // creds are injected via NuGetPackageSourceCredentials_<NAME> env at scan time.
     const result = await addSource(cwd, name, url, {
-      username,
-      password,
-      storePasswordInClearText: Boolean(password),
+      username: useSecrets ? undefined : username,
+      password: useSecrets ? undefined : password,
+      storePasswordInClearText: !useSecrets && Boolean(password),
     });
     if (!result.success) {
       this.post({
@@ -614,7 +645,19 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       logger.show();
       return;
     }
-    void vscode.window.showInformationMessage(`Added NuGet source "${name}".`);
+
+    if (useSecrets && password) {
+      await this.vault.store(name, username ?? '', password);
+    } else if (credentialStore === 'nuget-config') {
+      // If creds moved to nuget.config, drop any stale vault entry.
+      await this.vault.delete(name);
+    }
+
+    void vscode.window.showInformationMessage(
+      reauth
+        ? `Re-authenticated NuGet source "${name}".`
+        : `Added NuGet source "${name}".`,
+    );
     await this.refreshSources();
   }
 
@@ -636,6 +679,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       logger.show();
       return;
     }
+    await this.vault.delete(name);
     await this.refreshSources();
   }
 
@@ -659,9 +703,50 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     if (!cwd) return;
     try {
       const sources = await listSources(cwd);
-      this.post({ type: 'host:sources', sources });
+      await this.publishSources(sources, []);
     } catch (err) {
       logger.warn(`refreshSources failed: ${describeReason(err)}`);
+    }
+  }
+
+  /** Returns a usable cwd for `dotnet nuget` commands when no scan has run yet. */
+  private probeCwd(): string | undefined {
+    const fromScan = this.firstProjectCwd();
+    if (fromScan) return fromScan;
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    return folder ? folder.uri.fsPath : undefined;
+  }
+
+  /**
+   * Decorate the raw source list with credential-store + auth-failure info and
+   * push it to the webview. Emits `host:sourceAuthRequired` for any source that
+   * looks like it just 401'd/403'd against its feed.
+   */
+  private async publishSources(
+    rawSources: { name: string; url: string; enabled: boolean }[],
+    rawOutputs: string[],
+  ): Promise<void> {
+    const decorated: typeof this.lastSources = [];
+    for (const src of rawSources) {
+      const stored = await this.vault.get(src.name);
+      const credentialStore: 'nuget-config' | 'vscode-secrets' | 'none' = stored
+        ? 'vscode-secrets'
+        : 'none'; // We can't reliably know if nuget.config holds a password without parsing it.
+      const authFailed = detectAuthFailureForUrl(src.url, rawOutputs);
+      decorated.push({ ...src, credentialStore, authFailed });
+    }
+    this.lastSources = decorated;
+    this.post({ type: 'host:sources', sources: decorated });
+
+    for (const src of decorated) {
+      if (src.authFailed) {
+        this.post({
+          type: 'host:sourceAuthRequired',
+          name: src.name,
+          url: src.url,
+          credentialStore: src.credentialStore,
+        });
+      }
     }
   }
 
@@ -890,6 +975,35 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
 
 function describeReason(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
+}
+
+/**
+ * NuGet's CLI prints lines like:
+ *   error : Response status code does not indicate success: 401 (Unauthorized).
+ *   error : Unable to load the service index for source https://nuget.pkg.github.com/...
+ * We look for that pair: an auth-failure status and the source URL nearby.
+ */
+function detectAuthFailureForUrl(sourceUrl: string, outputs: string[]): boolean {
+  if (sourceUrl.length === 0) return false;
+  const host = safeHost(sourceUrl);
+  for (const out of outputs) {
+    if (out.length === 0) continue;
+    const mentionsSource =
+      (host !== undefined && out.includes(host)) || out.includes(sourceUrl);
+    if (!mentionsSource) continue;
+    if (/\b(401|403)\b/.test(out) || /Unauthorized|Forbidden/i.test(out)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function safeHost(url: string): string | undefined {
+  try {
+    return new URL(url).host;
+  } catch {
+    return undefined;
+  }
 }
 
 function firstLine(s: string): string {

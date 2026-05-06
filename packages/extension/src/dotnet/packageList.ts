@@ -35,6 +35,13 @@ export interface DotnetPackageEntry {
 export interface ListPackagesOptions {
   includeTransitive?: boolean;
   timeoutMs?: number;
+  extraEnv?: Record<string, string>;
+}
+
+export interface ListPackagesRawResult {
+  data: DotnetPackageListJson;
+  /** Combined stdout/stderr — useful for sniffing 401/403 from feed servers. */
+  output: string;
 }
 
 /**
@@ -51,7 +58,7 @@ export async function listPackages(
     args.push('--include-transitive');
   }
 
-  const result = await runDotnet(args, cwd, options.timeoutMs ?? 30_000);
+  const result = await runDotnet(args, cwd, options.timeoutMs ?? 30_000, options.extraEnv);
 
   if (result.code !== 0 && result.stdout.trim().length === 0) {
     throw new Error(
@@ -60,6 +67,25 @@ export async function listPackages(
   }
 
   return parsePackageListJson(result.stdout);
+}
+
+/** Same as listPackages but also returns the raw combined output for diagnostics. */
+export async function listPackagesWithOutput(
+  projectOrSolutionPath: string,
+  cwd: string,
+  options: ListPackagesOptions = {},
+): Promise<ListPackagesRawResult> {
+  const args = ['package', 'list', '--project', projectOrSolutionPath, '--format', 'json'];
+  if (options.includeTransitive) {
+    args.push('--include-transitive');
+  }
+  const result = await runDotnet(args, cwd, options.timeoutMs ?? 30_000, options.extraEnv);
+  if (result.code !== 0 && result.stdout.trim().length === 0) {
+    throw new Error(
+      `dotnet package list exited ${result.code} with no output. stderr:\n${result.stderr}`,
+    );
+  }
+  return { data: parsePackageListJson(result.stdout), output: `${result.stdout}\n${result.stderr}` };
 }
 
 /**

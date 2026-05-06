@@ -1849,7 +1849,7 @@ input[type='checkbox'] {
   border: 1px solid var(--vscode-input-border, transparent);
   padding: 2px 5px;
   font-family: inherit;
-  font-size: calc(11px * var(--ngc-font-scale));
+  font-size: 0.846rem;
 }
 
 .add-source-storage {
@@ -1863,7 +1863,7 @@ input[type='checkbox'] {
 }
 
 .add-source-storage legend {
-  font-size: calc(10px * var(--ngc-font-scale));
+  font-size: 0.769rem;
   color: var(--nc-muted);
   padding: 0 4px;
 }
@@ -1883,7 +1883,7 @@ input[type='checkbox'] {
 }
 
 .add-source-storage-option strong {
-  font-size: calc(11px * var(--ngc-font-scale));
+  font-size: 0.846rem;
   font-weight: 500;
 }
 

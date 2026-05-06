@@ -78,7 +78,23 @@ export interface HostSearchResultsMessage {
 
 export interface HostSourcesMessage {
   type: 'host:sources';
-  sources: Array<{ name: string; url: string; enabled: boolean }>;
+  sources: Array<{
+    name: string;
+    url: string;
+    enabled: boolean;
+    /** Where credentials live for this source, if any. */
+    credentialStore?: 'nuget-config' | 'vscode-secrets' | 'none';
+    /** True if a recent scan/restore got 401/403 against this source. */
+    authFailed?: boolean;
+  }>;
+}
+
+export interface HostSourceAuthRequiredMessage {
+  type: 'host:sourceAuthRequired';
+  name: string;
+  url: string;
+  /** Last seen storage choice for this source, used to default the re-auth modal. */
+  credentialStore?: 'nuget-config' | 'vscode-secrets' | 'none';
 }
 
 export interface HostReadmeMessage {
@@ -100,6 +116,7 @@ export type HostMessage =
   | HostProjectStatusMessage
   | HostSearchResultsMessage
   | HostSourcesMessage
+  | HostSourceAuthRequiredMessage
   | HostReadmeMessage
   | HostErrorMessage
   | HostStatusMessage;
@@ -163,6 +180,16 @@ export interface ViewAddSourceMessage {
   url: string;
   username?: string;
   password?: string;
+  /**
+   * Where to put the credentials.
+   * - `nuget-config`: clear-text in the user's nuget.config (shared with all .NET tools)
+   * - `vscode-secrets`: VS Code SecretStorage, injected at scan time only
+   *
+   * Ignored when no password is supplied. Default: `nuget-config`.
+   */
+  credentialStore?: 'nuget-config' | 'vscode-secrets';
+  /** True for a re-auth flow against an existing source. Replaces stored creds. */
+  reauth?: boolean;
 }
 
 export interface ViewRemoveSourceMessage {

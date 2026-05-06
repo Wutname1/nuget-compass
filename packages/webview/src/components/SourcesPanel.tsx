@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { vscode } from '../vscode.js';
+import { AddSourceModal } from './AddSourceModal.js';
 
 interface Source {
   name: string;
   url: string;
   enabled: boolean;
+  credentialStore?: 'nuget-config' | 'vscode-secrets' | 'none';
+  authFailed?: boolean;
 }
 
 interface SourcesPanelProps {
@@ -14,52 +17,92 @@ interface SourcesPanelProps {
 /**
  * Footer panel for managing NuGet sources from `nuget.config`. Backed by
  * `dotnet nuget add/remove/enable/disable source` (see view:addSource etc.).
+ *
+ * Sources stored with credentialStore="vscode-secrets" keep their secret in
+ * VS Code's SecretStorage and are injected into dotnet at scan time via
+ * NuGetPackageSourceCredentials_<NAME> env vars.
  */
 export function SourcesPanel({ sources }: SourcesPanelProps): JSX.Element | null {
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [reauthFor, setReauthFor] = useState<Source | undefined>(undefined);
 
-  if (sources.length === 0) return null;
+  if (sources.length === 0 && !showAddModal && !reauthFor) return null;
 
   const activeCount = sources.filter((s) => s.enabled).length;
+  const failingCount = sources.filter((s) => s.authFailed).length;
 
   return (
-    <details className="sources-footer">
-      <summary>
-        <span className="muted">
-          Configured sources ({activeCount} active, {sources.length} total)
-        </span>
-      </summary>
-      <ul className="sources-list">
-        {sources.map((src) => (
-          <SourceRow key={src.name} source={src} />
-        ))}
-      </ul>
-      <div className="sources-actions">
-        {showAddForm ? (
-          <AddSourceForm onClose={() => setShowAddForm(false)} />
-        ) : (
+    <>
+      <details className="sources-footer" open={failingCount > 0}>
+        <summary>
+          <span className="muted">
+            Configured sources ({activeCount} active, {sources.length} total)
+            {failingCount > 0 ? (
+              <span className="badge badge-source-off"> {failingCount} auth issue{failingCount === 1 ? '' : 's'}</span>
+            ) : null}
+          </span>
+        </summary>
+        <ul className="sources-list">
+          {sources.map((src) => (
+            <SourceRow key={src.name} source={src} onReauth={() => setReauthFor(src)} />
+          ))}
+        </ul>
+        <div className="sources-actions">
           <button
             type="button"
             className="btn-secondary"
-            onClick={() => setShowAddForm(true)}
+            onClick={() => setShowAddModal(true)}
           >
             Add source
           </button>
-        )}
-      </div>
-    </details>
+        </div>
+      </details>
+
+      {showAddModal ? <AddSourceModal onClose={() => setShowAddModal(false)} /> : null}
+      {reauthFor ? (
+        <AddSourceModal
+          reauthFor={{
+            name: reauthFor.name,
+            url: reauthFor.url,
+            credentialStore: reauthFor.credentialStore,
+          }}
+          onClose={() => setReauthFor(undefined)}
+        />
+      ) : null}
+    </>
   );
 }
 
-function SourceRow({ source }: { source: Source }): JSX.Element {
+function SourceRow({
+  source,
+  onReauth,
+}: {
+  source: Source;
+  onReauth: () => void;
+}): JSX.Element {
   return (
     <li className={source.enabled ? '' : 'source-disabled'}>
       <div className="source-row-main">
         <span className="source-name">{source.name}</span>
         <span className="muted source-url">{source.url}</span>
         {!source.enabled ? <span className="badge badge-source-off">disabled</span> : null}
+        {source.credentialStore === 'vscode-secrets' ? (
+          <span className="badge badge-source-store" title="Credentials stored in VS Code SecretStorage">
+            vs code creds
+          </span>
+        ) : null}
+        {source.authFailed ? (
+          <span className="badge badge-source-auth" title="Last scan failed authentication">
+            auth failed
+          </span>
+        ) : null}
       </div>
       <div className="source-row-actions">
+        {source.authFailed || source.credentialStore === 'vscode-secrets' ? (
+          <button type="button" className="btn-secondary" onClick={onReauth}>
+            Re-authenticate
+          </button>
+        ) : null}
         <button
           type="button"
           className="btn-secondary"
@@ -84,88 +127,5 @@ function SourceRow({ source }: { source: Source }): JSX.Element {
         </button>
       </div>
     </li>
-  );
-}
-
-function AddSourceForm({ onClose }: { onClose: () => void }): JSX.Element {
-  const [name, setName] = useState('');
-  const [url, setUrl] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [showCreds, setShowCreds] = useState(false);
-
-  const submit = (): void => {
-    if (name.trim().length === 0 || url.trim().length === 0) return;
-    vscode.postMessage({
-      type: 'view:addSource',
-      name: name.trim(),
-      url: url.trim(),
-      username: username.trim() || undefined,
-      password: password.length > 0 ? password : undefined,
-    });
-    onClose();
-  };
-
-  return (
-    <div className="add-source-form">
-      <label className="add-source-field">
-        <span>Name</span>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="MyFeed"
-        />
-      </label>
-      <label className="add-source-field">
-        <span>URL</span>
-        <input
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://example.com/v3/index.json"
-        />
-      </label>
-      <label className="add-source-credentials-toggle">
-        <input
-          type="checkbox"
-          checked={showCreds}
-          onChange={(e) => setShowCreds(e.target.checked)}
-        />
-        <span>Authenticated feed</span>
-      </label>
-      {showCreds ? (
-        <>
-          <label className="add-source-field">
-            <span>Username</span>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </label>
-          <label className="add-source-field">
-            <span>Password / token</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </label>
-          <p className="muted small">
-            Stored in clear text in your nuget.config. For Azure DevOps and similar feeds,
-            use a personal access token.
-          </p>
-        </>
-      ) : null}
-      <div className="add-source-buttons">
-        <button type="button" className="btn-primary" onClick={submit}>
-          Add
-        </button>
-        <button type="button" className="btn-secondary" onClick={onClose}>
-          Cancel
-        </button>
-      </div>
-    </div>
   );
 }
