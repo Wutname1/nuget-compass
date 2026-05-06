@@ -587,22 +587,168 @@ body {
   color: var(--vscode-descriptionForeground);
 }
 
-.badge-license {
-  background: var(--vscode-charts-green, rgba(60, 160, 90, 0.22));
-  color: var(--vscode-foreground);
-  font-size: 0.7rem;
+/* License rendered as a subtle text link, not a chart-color block, for legibility. */
+.version-license {
+  color: var(--vscode-textLink-foreground);
+  font-size: 0.75rem;
+  text-decoration: none;
+  border-bottom: 1px dotted var(--vscode-textLink-foreground);
 }
 
-.badge-notes {
-  background: var(--vscode-statusBarItem-prominentBackground, rgba(0, 122, 204, 0.18));
+.version-license:hover {
+  text-decoration: none;
+  border-bottom-style: solid;
+}
+
+.tfm-match {
   color: var(--vscode-foreground);
-  font-size: 0.7rem;
-  cursor: help;
+  font-weight: 700;
 }
 
 .version-size {
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
+}
+
+.version-row-wrapper {
+  list-style: none;
+}
+
+.version-details {
+  margin-top: 0.2rem;
+}
+
+.version-details summary {
+  cursor: pointer;
+  color: var(--vscode-textLink-foreground);
+  font-size: 0.75rem;
+}
+
+.version-details-body {
+  margin-top: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+  border-left: 2px solid var(--vscode-widget-border, transparent);
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.version-details-body h5 {
+  margin: 0 0 0.2rem 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.version-details-body p {
+  margin: 0;
+}
+
+.release-notes,
+.readme-body {
+  white-space: pre-wrap;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.75rem;
+  margin: 0;
+  padding: 0.4rem;
+  background: var(--vscode-textCodeBlock-background, transparent);
+  max-height: 320px;
+  overflow: auto;
+}
+
+.transitive-section {
+  border-top: 1px dashed var(--vscode-widget-border, transparent);
+}
+
+.transitive-header {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--vscode-descriptionForeground);
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+}
+
+.search-clear-button {
+  background: transparent;
+  color: var(--vscode-foreground);
+  border: 1px solid var(--vscode-widget-border, transparent);
+  padding: 0.25rem 0.7rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.search-clear-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sources-actions {
+  padding: 0.4rem 0.75rem 0.6rem;
+}
+
+.source-row-main {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  flex: 1;
+}
+
+.source-row-actions {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.sources-list li {
+  flex-wrap: wrap;
+}
+
+.add-source-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--vscode-widget-border, transparent);
+}
+
+.add-source-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+}
+
+.add-source-field input {
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, transparent);
+  padding: 0.25rem 0.4rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+
+.add-source-credentials-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+}
+
+.add-source-buttons {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
+}
+
+.small {
+  font-size: 0.7rem;
 }
 
 .sources-footer {

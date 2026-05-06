@@ -6,13 +6,20 @@ import type {
   VulnerabilityInfo,
 } from '@nuget-compass/shared';
 import { vscode } from '../vscode.js';
-import { packageKey, type ProjectStatus } from '../state/reducer.js';
+import {
+  packageKey,
+  readmeKey,
+  type ProjectStatus,
+  type ReadmeState,
+} from '../state/reducer.js';
 
 interface ProjectListProps {
   projects: Project[];
   rowsByProject: Record<string, PackageRow[]>;
   projectStatus: Record<string, ProjectStatus>;
   versionsByPackage: Record<string, AvailableVersion[]>;
+  readmes: Record<string, ReadmeState>;
+  showTransitive: boolean;
   expanded: Record<string, true>;
   onToggleExpanded: (projectPath: string, packageId: string) => void;
 }
@@ -22,6 +29,8 @@ export function ProjectList({
   rowsByProject,
   projectStatus,
   versionsByPackage,
+  readmes,
+  showTransitive,
   expanded,
   onToggleExpanded,
 }: ProjectListProps): JSX.Element {
@@ -40,9 +49,11 @@ export function ProjectList({
   return (
     <ul className="project-list">
       {projects.map((p) => {
-        const rows = rowsByProject[p.path] ?? [];
+        const allRows = rowsByProject[p.path] ?? [];
+        const topLevelRows = allRows.filter((r) => !r.package.isTransitive);
+        const transitiveRows = allRows.filter((r) => r.package.isTransitive);
         const status = projectStatus[p.path];
-        const summary = summarizeRows(rows);
+        const summary = summarizeRows(topLevelRows);
         const isEnriching = status?.status === 'enriching';
         const isReady = status?.status === 'ready';
         return (
@@ -84,14 +95,33 @@ export function ProjectList({
             </header>
             <PackageRows
               projectPath={p.path}
-              rows={rows}
+              projectTfms={p.targetFrameworks}
+              rows={topLevelRows}
+              readmes={readmes}
               versionsByPackage={versionsByPackage}
               expanded={expanded}
               onToggleExpanded={onToggleExpanded}
               showSkeleton={isEnriching}
             />
-            {isReady && rows.length > 0 && summary.withUpdates === 0 ? (
-              <p className="muted indent project-up-to-date">All packages are up to date.</p>
+            {isReady && topLevelRows.length > 0 && summary.withUpdates === 0 ? (
+              <p className="muted indent project-up-to-date">All top-level packages are up to date.</p>
+            ) : null}
+            {showTransitive && transitiveRows.length > 0 ? (
+              <div className="transitive-section">
+                <header className="transitive-header">
+                  <span>Transitive dependencies</span>
+                  <span className="muted">({transitiveRows.length})</span>
+                </header>
+                <PackageRows
+                  projectPath={p.path}
+                  projectTfms={p.targetFrameworks}
+                  rows={transitiveRows}
+                  readmes={readmes}
+                  versionsByPackage={versionsByPackage}
+                  expanded={expanded}
+                  onToggleExpanded={onToggleExpanded}
+                />
+              </div>
             ) : null}
           </li>
         );
@@ -142,7 +172,9 @@ function ProjectHeaderBadges({ summary }: { summary: ProjectSummary }): JSX.Elem
 
 interface PackageRowsProps {
   projectPath: string;
+  projectTfms: string[];
   rows: PackageRow[];
+  readmes: Record<string, ReadmeState>;
   versionsByPackage: Record<string, AvailableVersion[]>;
   expanded: Record<string, true>;
   onToggleExpanded: (projectPath: string, packageId: string) => void;
@@ -151,7 +183,9 @@ interface PackageRowsProps {
 
 function PackageRows({
   projectPath,
+  projectTfms,
   rows,
+  readmes,
   versionsByPackage,
   expanded,
   onToggleExpanded,
@@ -219,9 +253,11 @@ function PackageRows({
                 </div>
                 <VersionList
                   projectPath={projectPath}
+                  projectTfms={projectTfms}
                   packageId={row.package.id}
                   currentVersion={row.package.resolvedVersion}
                   versions={versions}
+                  readmes={readmes}
                 />
               </>
             ) : null}
@@ -285,14 +321,18 @@ function highestSeverity(vulns: VulnerabilityInfo[]): VulnerabilityInfo['severit
 
 function VersionList({
   projectPath,
+  projectTfms,
   packageId,
   currentVersion,
   versions,
+  readmes,
 }: {
   projectPath: string;
+  projectTfms: string[];
   packageId: string;
   currentVersion: string;
   versions: AvailableVersion[] | undefined;
+  readmes: Record<string, ReadmeState>;
 }): JSX.Element {
   if (!versions) {
     return (
@@ -317,77 +357,204 @@ function VersionList({
 
   return (
     <ul className="version-list">
-      {list.map((v) => {
-        const isCurrent = v.version === currentVersion;
-        const clickable = !isCurrent;
-        const className =
-          'version-string ' +
-          (isCurrent ? 'version-current' : '') +
-          (!v.isCompatible ? ' version-incompatible' : '');
-        return (
-          <li key={v.version} className="version-row">
-            {clickable ? (
-              <button
-                type="button"
-                className={`version-button ${className}`}
-                onClick={() =>
-                  vscode.postMessage({
-                    type: 'view:updatePackage',
-                    projectPath,
-                    packageId,
-                    toVersion: v.version,
-                  })
-                }
-              >
-                {v.version}
-                {v.isPrerelease ? <span className="badge badge-prerelease">prerelease</span> : null}
-              </button>
-            ) : (
-              <span className={className}>
-                {v.version}
-                {v.isPrerelease ? <span className="badge badge-prerelease">prerelease</span> : null}
-                <span className="muted"> (current)</span>
-              </span>
-            )}
-            <span className="version-meta">
-              {!v.isCompatible && v.supportedFrameworks.length > 0 ? (
-                <span className="badge badge-incompatible">
-                  ✗ Requires {v.supportedFrameworks.join(', ')}
-                </span>
-              ) : null}
-              {v.isCompatible && v.supportedFrameworks.length > 0 ? (
-                <span className="muted version-tfms">{v.supportedFrameworks.join(', ')}</span>
-              ) : null}
-              {v.licenseExpression ? (
-                <span
-                  className="badge badge-license"
-                  title={v.licenseUrl ?? v.licenseExpression}
-                >
-                  {v.licenseExpression}
-                </span>
-              ) : null}
-              {v.packageSize !== undefined ? (
-                <span className="muted version-size" title="Package size on disk">
-                  {formatBytes(v.packageSize)}
-                </span>
-              ) : null}
-              {v.releaseNotes ? (
-                <span
-                  className="badge badge-notes"
-                  title={truncate(v.releaseNotes, 600)}
-                >
-                  notes
-                </span>
-              ) : null}
-              {v.published ? (
-                <span className="muted version-date">{formatDate(v.published)}</span>
-              ) : null}
-            </span>
-          </li>
-        );
-      })}
+      {list.map((v) => (
+        <VersionRow
+          key={v.version}
+          v={v}
+          projectPath={projectPath}
+          projectTfms={projectTfms}
+          packageId={packageId}
+          currentVersion={currentVersion}
+          readmes={readmes}
+        />
+      ))}
     </ul>
   );
+}
+
+function VersionRow({
+  v,
+  projectPath,
+  projectTfms,
+  packageId,
+  currentVersion,
+  readmes,
+}: {
+  v: AvailableVersion;
+  projectPath: string;
+  projectTfms: string[];
+  packageId: string;
+  currentVersion: string;
+  readmes: Record<string, ReadmeState>;
+}): JSX.Element {
+  const isCurrent = v.version === currentVersion;
+  const clickable = !isCurrent;
+  const className =
+    'version-string ' +
+    (isCurrent ? 'version-current' : '') +
+    (!v.isCompatible ? ' version-incompatible' : '');
+
+  const hasExtra =
+    Boolean(v.description) || Boolean(v.releaseNotes) || Boolean(v.readmeUrl);
+  const readme = v.readmeUrl ? readmes[readmeKey(packageId, v.version)] : undefined;
+
+  return (
+    <li className="version-row-wrapper">
+      <div className="version-row">
+        {clickable ? (
+          <button
+            type="button"
+            className={`version-button ${className}`}
+            onClick={() =>
+              vscode.postMessage({
+                type: 'view:updatePackage',
+                projectPath,
+                packageId,
+                toVersion: v.version,
+              })
+            }
+          >
+            {v.version}
+            {v.isPrerelease ? <span className="badge badge-prerelease">prerelease</span> : null}
+          </button>
+        ) : (
+          <span className={className}>
+            {v.version}
+            {v.isPrerelease ? <span className="badge badge-prerelease">prerelease</span> : null}
+            <span className="muted"> (current)</span>
+          </span>
+        )}
+        <span className="version-meta">
+          {!v.isCompatible && v.supportedFrameworks.length > 0 ? (
+            <span className="badge badge-incompatible">
+              ✗ Requires {renderTfms(v.supportedFrameworks, projectTfms)}
+            </span>
+          ) : null}
+          {v.isCompatible && v.supportedFrameworks.length > 0 ? (
+            <span className="muted version-tfms">
+              {renderTfms(v.supportedFrameworks, projectTfms)}
+            </span>
+          ) : null}
+          {v.licenseExpression ? (
+            <a
+              className="version-license"
+              href={v.licenseUrl ?? '#'}
+              title={v.licenseUrl ?? v.licenseExpression}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {v.licenseExpression}
+            </a>
+          ) : null}
+          {v.packageSize !== undefined ? (
+            <span className="muted version-size" title="Package size on disk">
+              {formatBytes(v.packageSize)}
+            </span>
+          ) : null}
+          {v.published ? (
+            <span className="muted version-date">{formatDate(v.published)}</span>
+          ) : null}
+          {hasExtra ? (
+            <details
+              className="version-details"
+              onToggle={(e) => {
+                const isOpen = (e.target as HTMLDetailsElement).open;
+                if (isOpen && v.readmeUrl && !readme) {
+                  vscode.postMessage({
+                    type: 'view:fetchReadme',
+                    packageId,
+                    version: v.version,
+                    readmeUrl: v.readmeUrl,
+                  });
+                }
+              }}
+            >
+              <summary>details</summary>
+              <VersionDetails v={v} readme={readme} />
+            </details>
+          ) : null}
+        </span>
+      </div>
+    </li>
+  );
+}
+
+function VersionDetails({
+  v,
+  readme,
+}: {
+  v: AvailableVersion;
+  readme: ReadmeState | undefined;
+}): JSX.Element {
+  return (
+    <div className="version-details-body">
+      {v.description ? (
+        <section>
+          <h5>Description</h5>
+          <p>{v.description}</p>
+        </section>
+      ) : null}
+      {v.releaseNotes ? (
+        <section>
+          <h5>Release notes</h5>
+          <pre className="release-notes">{v.releaseNotes}</pre>
+        </section>
+      ) : null}
+      {v.readmeUrl ? (
+        <section>
+          <h5>README</h5>
+          {readme === undefined ? (
+            <p className="muted">Click "details" again to load.</p>
+          ) : readme.loading ? (
+            <p className="muted">Loading…</p>
+          ) : readme.contentType === 'error' ? (
+            <p className="muted">Could not load README ({readme.errorMessage ?? 'unknown error'}).</p>
+          ) : (
+            <pre className="readme-body">{readme.body}</pre>
+          )}
+          {v.readmeUrl ? (
+            <a href={v.readmeUrl} target="_blank" rel="noopener noreferrer" className="muted">
+              Open on nuget.org
+            </a>
+          ) : null}
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Render the supported-framework list with the project's matching framework
+ * bolded so the user can see which TFM they're consuming.
+ */
+function renderTfms(supported: string[], projectTfms: string[]): JSX.Element {
+  return (
+    <>
+      {supported.map((tfm, i) => {
+        const matches = projectTfms.some((p) => normalize(p) === normalize(tfm));
+        return (
+          <span key={tfm}>
+            {i > 0 ? ', ' : ''}
+            {matches ? <strong className="tfm-match">{tfm}</strong> : <span>{tfm}</span>}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+function normalize(tfm: string): string {
+  // Trim whitespace and lowercase; strip the ".NET" prefix variants and
+  // canonicalize "version=v" syntax.
+  return tfm
+    .toLowerCase()
+    .replace(/^\.net(framework|standard|coreapp|),?\s*(?:version=v?)?/i, (match) => {
+      if (match.startsWith('.netframework')) return 'net';
+      if (match.startsWith('.netstandard')) return 'netstandard';
+      if (match.startsWith('.netcoreapp')) return 'netcoreapp';
+      return 'net';
+    })
+    .replace(/\s+/g, '');
 }
 
 function formatBytes(n: number): string {
@@ -396,10 +563,6 @@ function formatBytes(n: number): string {
   return `${n} B`;
 }
 
-function truncate(s: string, max: number): string {
-  if (s.length <= max) return s;
-  return s.slice(0, max).trimEnd() + '…';
-}
 
 function formatDate(iso: string): string {
   return iso.slice(0, 10);

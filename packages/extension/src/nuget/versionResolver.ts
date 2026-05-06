@@ -37,6 +37,7 @@ export async function resolveAvailableVersions(options: ResolveOptions): Promise
     licenseExpression: m.licenseExpression,
     licenseUrl: m.licenseUrl,
     projectUrl: m.projectUrl,
+    readmeUrl: m.readmeUrl,
     releaseNotes: m.releaseNotes,
     description: m.description,
     authors: m.authors,

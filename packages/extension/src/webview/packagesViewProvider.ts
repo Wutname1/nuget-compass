@@ -20,6 +20,12 @@ import { addPackage } from '../dotnet/addPackage.js';
 import { removePackage } from '../dotnet/removePackage.js';
 import { searchPackages } from '../dotnet/searchPackages.js';
 import { listSources } from '../dotnet/listSources.js';
+import {
+  addSource,
+  removeSource,
+  enableSource,
+  disableSource,
+} from '../dotnet/sources.js';
 
 export class PackagesViewProvider implements vscode.WebviewViewProvider {
   static readonly viewType = 'nuget-compass.packages';
@@ -70,7 +76,9 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     this.post({ type: 'host:status', status: 'scanning' });
     const filters = this.loadFilters();
     try {
-      const result = await scanWorkspace({ includeTransitive: filters.showTransitive });
+      // Always fetch transitives. The webview filters them per the user's
+      // current "Show transitive" toggle without needing a refetch.
+      const result = await scanWorkspace({ includeTransitive: true });
       this.lastProjects = result.projects;
       this.lastRowsByProject.clear();
       this.post({ type: 'host:projects', projects: result.projects });
@@ -84,19 +92,20 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
           .catch((err: unknown) => logger.warn(`listSources failed: ${describeReason(err)}`));
       }
 
-      // First paint: send rows without newestAllowed so the UI shows packages
-      // immediately. enrichProject fills in newestAllowed + badges in the
-      // background.
+      // First paint: send all rows including transitive. The webview filters
+      // them in-memory per the user's current "Show transitive" toggle.
       for (const project of result.projects) {
-        const rows: PackageRow[] = project.packages
-          .filter((p) => filters.showTransitive || !p.isTransitive)
-          .map((pkg) => ({ projectPath: project.path, package: pkg }));
+        const rows: PackageRow[] = project.packages.map((pkg) => ({
+          projectPath: project.path,
+          package: pkg,
+        }));
         this.post({ type: 'host:packageRows', projectPath: project.path, rows });
+        const enrichTotal = rows.filter((r) => !r.package.isTransitive).length;
         this.post({
           type: 'host:projectStatus',
           projectPath: project.path,
           status: 'enriching',
-          progress: { done: 0, total: rows.length },
+          progress: { done: 0, total: enrichTotal },
         });
       }
 
@@ -133,9 +142,10 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
 
     // Vulnerability + deprecation scans come from the SDK and are accurate.
     // newestAllowed comes from the catalog (target-framework aware) per package.
-    const visiblePackages = project.packages.filter(
-      (p) => filters.showTransitive || !p.isTransitive,
-    );
+    // We only enrich top-level packages; transitives don't need newestAllowed
+    // since they aren't directly upgradeable. The "Show transitive" toggle
+    // is purely visual now and the webview filters in-memory.
+    const visiblePackages = project.packages.filter((p) => !p.isTransitive);
 
     this.post({
       type: 'host:projectStatus',
@@ -208,15 +218,21 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
           ),
           new Map());
 
-    const rows: PackageRow[] = visiblePackages.map((pkg) => {
+    // Build enriched rows for top-level packages, plus pass-through rows
+    // for transitives so the user can still see them when "Show transitive"
+    // is toggled on. Transitives don't get vuln/deprec/newestAllowed - those
+    // signals attach to top-level pins.
+    const rows: PackageRow[] = project.packages.map((pkg) => {
       const key = `${project.path}::${pkg.id}`;
       const row: PackageRow = { projectPath: project.path, package: pkg };
-      const newest = newestById.get(pkg.id);
-      if (newest !== undefined) row.newestAllowed = newest;
-      const vulns = vulnsByKey.get(key);
-      if (vulns) row.vulnerability = vulns;
-      const dep = depsByKey.get(key);
-      if (dep) row.deprecation = dep;
+      if (!pkg.isTransitive) {
+        const newest = newestById.get(pkg.id);
+        if (newest !== undefined) row.newestAllowed = newest;
+        const vulns = vulnsByKey.get(key);
+        if (vulns) row.vulnerability = vulns;
+        const dep = depsByKey.get(key);
+        if (dep) row.deprecation = dep;
+      }
       return row;
     });
 
@@ -298,6 +314,18 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         return;
       case 'view:installPackage':
         void this.installPackage(msg.projectPath, msg.packageId, msg.version);
+        return;
+      case 'view:addSource':
+        void this.handleAddSource(msg.name, msg.url, msg.username, msg.password);
+        return;
+      case 'view:removeSource':
+        void this.handleRemoveSource(msg.name);
+        return;
+      case 'view:toggleSource':
+        void this.handleToggleSource(msg.name, msg.enabled);
+        return;
+      case 'view:fetchReadme':
+        void this.handleFetchReadme(msg.packageId, msg.version, msg.readmeUrl);
         return;
     }
   }
@@ -549,6 +577,123 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   private firstProjectCwd(): string | undefined {
     const first = this.lastProjects[0];
     return first ? path.dirname(first.path) : undefined;
+  }
+
+  private async handleAddSource(
+    name: string,
+    url: string,
+    username?: string,
+    password?: string,
+  ): Promise<void> {
+    const cwd = this.firstProjectCwd() ?? process.cwd();
+    const result = await addSource(cwd, name, url, {
+      username,
+      password,
+      storePasswordInClearText: Boolean(password),
+    });
+    if (!result.success) {
+      this.post({
+        type: 'host:error',
+        message: `Could not add source "${name}".`,
+        detail: result.output,
+      });
+      logger.show();
+      return;
+    }
+    void vscode.window.showInformationMessage(`Added NuGet source "${name}".`);
+    await this.refreshSources();
+  }
+
+  private async handleRemoveSource(name: string): Promise<void> {
+    const choice = await vscode.window.showInformationMessage(
+      `Remove NuGet source "${name}"?`,
+      { modal: true },
+      'Remove',
+    );
+    if (choice !== 'Remove') return;
+    const cwd = this.firstProjectCwd() ?? process.cwd();
+    const result = await removeSource(cwd, name);
+    if (!result.success) {
+      this.post({
+        type: 'host:error',
+        message: `Could not remove source "${name}".`,
+        detail: result.output,
+      });
+      logger.show();
+      return;
+    }
+    await this.refreshSources();
+  }
+
+  private async handleToggleSource(name: string, enabled: boolean): Promise<void> {
+    const cwd = this.firstProjectCwd() ?? process.cwd();
+    const result = enabled ? await enableSource(cwd, name) : await disableSource(cwd, name);
+    if (!result.success) {
+      this.post({
+        type: 'host:error',
+        message: `Could not ${enabled ? 'enable' : 'disable'} source "${name}".`,
+        detail: result.output,
+      });
+      logger.show();
+      return;
+    }
+    await this.refreshSources();
+  }
+
+  private async refreshSources(): Promise<void> {
+    const cwd = this.firstProjectCwd();
+    if (!cwd) return;
+    try {
+      const sources = await listSources(cwd);
+      this.post({ type: 'host:sources', sources });
+    } catch (err) {
+      logger.warn(`refreshSources failed: ${describeReason(err)}`);
+    }
+  }
+
+  private async handleFetchReadme(
+    packageId: string,
+    version: string,
+    readmeUrl: string,
+  ): Promise<void> {
+    void readmeUrl; // The provided URL points at nuget.org's HTML page; we use the
+    // flat-container endpoint instead to get the raw README markdown.
+    const flatContainerUrl =
+      `https://api.nuget.org/v3-flatcontainer/${encodeURIComponent(
+        packageId.toLowerCase(),
+      )}/${encodeURIComponent(version)}/readme`;
+    try {
+      logger.trace(`HTTP GET ${flatContainerUrl}`);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10_000);
+      const response = await fetch(flatContainerUrl, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'nuget-compass (+vscode-extension)' },
+      });
+      clearTimeout(timer);
+      if (!response.ok) {
+        this.post({
+          type: 'host:readme',
+          packageId,
+          version,
+          body: '',
+          contentType: 'error',
+          errorMessage: `HTTP ${response.status}`,
+        });
+        return;
+      }
+      const text = await response.text();
+      this.post({ type: 'host:readme', packageId, version, body: text, contentType: 'markdown' });
+    } catch (err) {
+      this.post({
+        type: 'host:readme',
+        packageId,
+        version,
+        body: '',
+        contentType: 'error',
+        errorMessage: describeReason(err),
+      });
+    }
   }
 
   private post(message: HostMessage): void {

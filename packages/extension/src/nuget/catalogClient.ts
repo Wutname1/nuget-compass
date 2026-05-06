@@ -24,6 +24,7 @@ export interface PackageVersionMetadata {
   licenseExpression?: string;
   licenseUrl?: string;
   projectUrl?: string;
+  readmeUrl?: string;
   releaseNotes?: string;
   description?: string;
   authors?: string;
@@ -255,6 +256,7 @@ function leafToMetadata(leaf: import('./registration.js').RegistrationLeaf): Pac
     licenseExpression: ce.licenseExpression,
     licenseUrl: ce.licenseUrl,
     projectUrl: ce.projectUrl,
+    readmeUrl: ce.readmeUrl,
     releaseNotes: ce.releaseNotes,
     description: ce.description,
     authors: ce.authors,

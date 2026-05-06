@@ -15,6 +15,9 @@ out/
 .idea/
 *.swp
 
+# Claude Code internal artifacts
+.claude/
+
 # OS
 .DS_Store
 Thumbs.db

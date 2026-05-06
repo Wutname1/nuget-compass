@@ -62,6 +62,7 @@ export interface RegistrationCatalogEntry {
   licenseUrl?: string;
   projectUrl?: string;
   iconUrl?: string;
+  readmeUrl?: string;
   /** Long-form release notes when the package author included them. */
   releaseNotes?: string;
   /** Total package size in bytes (from .nupkg metadata when present). */

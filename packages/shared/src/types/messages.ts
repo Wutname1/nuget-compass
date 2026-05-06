@@ -75,6 +75,16 @@ export interface HostSourcesMessage {
   sources: Array<{ name: string; url: string; enabled: boolean }>;
 }
 
+export interface HostReadmeMessage {
+  type: 'host:readme';
+  packageId: string;
+  version: string;
+  /** Markdown content if we fetched it; HTML if NuGet served HTML; empty string on failure. */
+  body: string;
+  contentType: 'markdown' | 'html' | 'error';
+  errorMessage?: string;
+}
+
 export type HostMessage =
   | HostInitMessage
   | HostProjectsMessage
@@ -83,6 +93,7 @@ export type HostMessage =
   | HostProjectStatusMessage
   | HostSearchResultsMessage
   | HostSourcesMessage
+  | HostReadmeMessage
   | HostErrorMessage
   | HostStatusMessage;
 
@@ -139,6 +150,33 @@ export interface ViewInstallPackageMessage {
   version?: string;
 }
 
+export interface ViewAddSourceMessage {
+  type: 'view:addSource';
+  name: string;
+  url: string;
+  username?: string;
+  password?: string;
+}
+
+export interface ViewRemoveSourceMessage {
+  type: 'view:removeSource';
+  name: string;
+}
+
+export interface ViewToggleSourceMessage {
+  type: 'view:toggleSource';
+  name: string;
+  enabled: boolean;
+}
+
+export interface ViewFetchReadmeMessage {
+  type: 'view:fetchReadme';
+  packageId: string;
+  version: string;
+  /** URL pulled from the catalog. */
+  readmeUrl: string;
+}
+
 export type ViewMessage =
   | ViewReadyMessage
   | ViewRefreshMessage
@@ -148,4 +186,8 @@ export type ViewMessage =
   | ViewUpdateAllMessage
   | ViewUninstallPackageMessage
   | ViewSearchPackagesMessage
-  | ViewInstallPackageMessage;
+  | ViewInstallPackageMessage
+  | ViewAddSourceMessage
+  | ViewRemoveSourceMessage
+  | ViewToggleSourceMessage
+  | ViewFetchReadmeMessage;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Project } from '@nuget-compass/shared';
 import type { SearchHit } from '../state/reducer.js';
 import { vscode } from '../vscode.js';
@@ -7,24 +7,39 @@ interface SearchPanelProps {
   projects: Project[];
   query: string;
   results: SearchHit[];
+  /** When this flips, an active search auto re-fires. */
+  includePrerelease: boolean;
   onQueryChange: (query: string) => void;
+  onClear: () => void;
 }
 
 export function SearchPanel({
   projects,
   query,
   results,
+  includePrerelease,
   onQueryChange,
+  onClear,
 }: SearchPanelProps): JSX.Element {
   const [selectedProject, setSelectedProject] = useState<string>('');
+  const lastSearchedQuery = useRef<string>('');
 
   const submit = (): void => {
     if (query.trim().length === 0) return;
+    lastSearchedQuery.current = query;
     vscode.postMessage({ type: 'view:searchPackages', query });
   };
 
-  const targetProject =
-    selectedProject || (projects[0]?.path ?? '');
+  // Auto re-search when the prerelease filter changes IF a query was already
+  // executed. Don't fire on first mount or when only the input has changed.
+  useEffect(() => {
+    if (lastSearchedQuery.current.length > 0 && lastSearchedQuery.current === query) {
+      vscode.postMessage({ type: 'view:searchPackages', query });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [includePrerelease]);
+
+  const targetProject = selectedProject || (projects[0]?.path ?? '');
 
   return (
     <div className="search-panel">
@@ -37,10 +52,23 @@ export function SearchPanel({
           onChange={(e) => onQueryChange(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') submit();
+            if (e.key === 'Escape') onClear();
           }}
         />
         <button type="button" className="search-button" onClick={submit}>
           Search
+        </button>
+        <button
+          type="button"
+          className="search-clear-button"
+          onClick={() => {
+            lastSearchedQuery.current = '';
+            onClear();
+          }}
+          disabled={query.length === 0 && results.length === 0}
+          title="Clear search (Esc)"
+        >
+          Clear
         </button>
       </div>
       {projects.length > 1 ? (

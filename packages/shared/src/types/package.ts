@@ -15,6 +15,7 @@ export interface AvailableVersion {
   licenseExpression?: string;
   licenseUrl?: string;
   projectUrl?: string;
+  readmeUrl?: string;
   releaseNotes?: string;
   description?: string;
   authors?: string;

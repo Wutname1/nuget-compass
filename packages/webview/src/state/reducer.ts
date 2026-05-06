@@ -6,6 +6,13 @@ export interface ProjectStatus {
   progress?: { done: number; total: number };
 }
 
+export interface ReadmeState {
+  loading: boolean;
+  body?: string;
+  contentType?: 'markdown' | 'html' | 'error';
+  errorMessage?: string;
+}
+
 export interface SearchHit {
   id: string;
   latestVersion: string;
@@ -28,6 +35,8 @@ export interface AppState {
   error?: { message: string; detail?: string };
   search: { query: string; results: SearchHit[]; visible: boolean };
   sources: Array<{ name: string; url: string; enabled: boolean }>;
+  /** README body keyed by `${packageId}@${version}`. */
+  readmes: Record<string, ReadmeState>;
 }
 
 export const initialState: AppState = {
@@ -40,14 +49,21 @@ export const initialState: AppState = {
   status: 'idle',
   search: { query: '', results: [], visible: false },
   sources: [],
+  readmes: {},
 };
+
+export function readmeKey(packageId: string, version: string): string {
+  return `${packageId}@${version}`;
+}
 
 export type Action =
   | { type: 'host'; message: HostMessage }
   | { type: 'setFilters'; filters: FilterState }
   | { type: 'toggleExpanded'; projectPath: string; packageId: string }
   | { type: 'toggleSearch' }
-  | { type: 'setSearchQuery'; query: string };
+  | { type: 'setSearchQuery'; query: string }
+  | { type: 'clearSearch' }
+  | { type: 'readmeRequested'; packageId: string; version: string };
 
 export function packageKey(projectPath: string, packageId: string): string {
   return `${projectPath}::${packageId}`;
@@ -68,6 +84,16 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, search: { ...state.search, visible: !state.search.visible } };
     case 'setSearchQuery':
       return { ...state, search: { ...state.search, query: action.query } };
+    case 'clearSearch':
+      return { ...state, search: { ...state.search, query: '', results: [] } };
+    case 'readmeRequested':
+      return {
+        ...state,
+        readmes: {
+          ...state.readmes,
+          [readmeKey(action.packageId, action.version)]: { loading: true },
+        },
+      };
     case 'host':
       return applyHostMessage(state, action.message);
   }
@@ -107,6 +133,19 @@ function applyHostMessage(state: AppState, msg: HostMessage): AppState {
       return { ...state, search: { ...state.search, query: msg.query, results: msg.results } };
     case 'host:sources':
       return { ...state, sources: msg.sources };
+    case 'host:readme':
+      return {
+        ...state,
+        readmes: {
+          ...state.readmes,
+          [readmeKey(msg.packageId, msg.version)]: {
+            loading: false,
+            body: msg.body,
+            contentType: msg.contentType,
+            errorMessage: msg.errorMessage,
+          },
+        },
+      };
     case 'host:status':
       return { ...state, status: msg.status };
     case 'host:error':
