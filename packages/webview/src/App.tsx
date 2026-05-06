@@ -116,6 +116,7 @@ export function App(): JSX.Element {
           <DetailPanel
             row={selectedRow}
             project={selectedProject}
+            filters={state.filters}
             versions={
               state.selectedPackage
                 ? state.versionsByPackage[

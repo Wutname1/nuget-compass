@@ -295,7 +295,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         else this.refresh();
         return;
       case 'view:setFilters':
-        void this.saveFilters(msg.filters);
+        void this.applyFilterChange(msg.filters);
         return;
       case 'view:expandPackage':
         void this.expandPackage(msg.projectPath, msg.packageId);
@@ -725,6 +725,92 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       ),
       cfg.update('showTransitive', filters.showTransitive, vscode.ConfigurationTarget.Workspace),
     ]);
+  }
+
+  /**
+   * Filter dropdowns moved -> persist + recompute newestAllowed for every
+   * visible package against the new filter set. Vulnerability and deprecation
+   * data is filter-independent, so it's reused from the last enrichment.
+   */
+  private async applyFilterChange(filters: FilterState): Promise<void> {
+    await this.saveFilters(filters);
+    if (this.lastProjects.length === 0) return;
+
+    this.post({ type: 'host:status', status: 'fetching' });
+    try {
+      await Promise.all(
+        this.lastProjects.map((project) => this.recomputeNewestAllowed(project, filters)),
+      );
+    } finally {
+      this.post({ type: 'host:status', status: 'idle' });
+    }
+  }
+
+  private async recomputeNewestAllowed(
+    project: Project,
+    filters: FilterState,
+  ): Promise<void> {
+    const existingRows = this.lastRowsByProject.get(project.path) ?? [];
+    const topLevel = project.packages.filter((p) => !p.isTransitive);
+    if (topLevel.length === 0) return;
+
+    this.post({
+      type: 'host:projectStatus',
+      projectPath: project.path,
+      status: 'enriching',
+      progress: { done: 0, total: topLevel.length },
+    });
+
+    let done = 0;
+    const newestById = new Map<string, string | undefined>();
+    await Promise.all(
+      topLevel.map(async (pkg) => {
+        try {
+          const newest = await resolveNewestAllowed({
+            packageId: pkg.id,
+            currentVersion: pkg.resolvedVersion,
+            projectTargetFrameworks: project.targetFrameworks,
+            filters,
+            catalog: this.catalog,
+          });
+          newestById.set(pkg.id, newest);
+        } catch (err) {
+          logger.warn(
+            `newestAllowed lookup failed for ${pkg.id}: ${describeReason(err)}`,
+          );
+          newestById.set(pkg.id, undefined);
+        } finally {
+          done++;
+          if (done === topLevel.length || done % 5 === 0) {
+            this.post({
+              type: 'host:projectStatus',
+              projectPath: project.path,
+              status: 'enriching',
+              progress: { done, total: topLevel.length },
+            });
+          }
+        }
+      }),
+    );
+
+    // Keep vuln/deprec data from the prior enrichment; only newestAllowed
+    // changes when filters move.
+    const prior = new Map(existingRows.map((r) => [r.package.id, r] as const));
+    const rows: PackageRow[] = project.packages.map((pkg) => {
+      const previous = prior.get(pkg.id);
+      const row: PackageRow = { projectPath: project.path, package: pkg };
+      if (!pkg.isTransitive) {
+        const newest = newestById.get(pkg.id);
+        if (newest !== undefined) row.newestAllowed = newest;
+        if (previous?.vulnerability) row.vulnerability = previous.vulnerability;
+        if (previous?.deprecation) row.deprecation = previous.deprecation;
+      }
+      return row;
+    });
+
+    this.lastRowsByProject.set(project.path, rows);
+    this.post({ type: 'host:packageRows', projectPath: project.path, rows });
+    this.post({ type: 'host:projectStatus', projectPath: project.path, status: 'ready' });
   }
 
   private renderHtml(webview: vscode.Webview): string {

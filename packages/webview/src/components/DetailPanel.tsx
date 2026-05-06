@@ -1,10 +1,11 @@
-import type { AvailableVersion, PackageRow, Project } from '@nuget-compass/shared';
+import type { AvailableVersion, FilterState, PackageRow, Project } from '@nuget-compass/shared';
 import { vscode } from '../vscode.js';
 import { readmeKey, type ReadmeState } from '../state/reducer.js';
 
 interface DetailPanelProps {
   row: PackageRow | undefined;
   project: Project | undefined;
+  filters: FilterState;
   versions: AvailableVersion[] | undefined;
   readmes: Record<string, ReadmeState>;
   onClose: () => void;
@@ -18,6 +19,7 @@ interface DetailPanelProps {
 export function DetailPanel({
   row,
   project,
+  filters,
   versions,
   readmes,
   onClose,
@@ -77,6 +79,7 @@ export function DetailPanel({
       <VersionsSection
         row={row}
         project={project}
+        filters={filters}
         versions={versions}
       />
     </div>
@@ -177,10 +180,12 @@ function ReadmeSection({
 function VersionsSection({
   row,
   project,
+  filters,
   versions,
 }: {
   row: PackageRow;
   project: Project;
+  filters: FilterState;
   versions: AvailableVersion[] | undefined;
 }): JSX.Element {
   if (!versions) {
@@ -200,21 +205,98 @@ function VersionsSection({
     );
   }
 
+  const filtered = filterVersions(versions, row.package.resolvedVersion, filters);
+  const hiddenCount = versions.length - filtered.length;
+
   return (
     <section className="detail-section detail-versions-section">
-      <h3>Versions</h3>
-      <ul className="detail-version-list">
-        {versions.map((v) => (
-          <DetailVersionRow
-            key={v.version}
-            v={v}
-            row={row}
-            projectTfms={project.targetFrameworks}
-          />
-        ))}
-      </ul>
+      <h3>
+        Versions{' '}
+        <span className="muted detail-section-meta">
+          ({filtered.length}
+          {hiddenCount > 0 ? ` shown, ${hiddenCount} hidden by filters` : ''})
+        </span>
+      </h3>
+      {filtered.length === 0 ? (
+        <p className="muted">All versions are hidden by current filters.</p>
+      ) : (
+        <ul className="detail-version-list">
+          {filtered.map((v) => (
+            <DetailVersionRow
+              key={v.version}
+              v={v}
+              row={row}
+              projectTfms={project.targetFrameworks}
+            />
+          ))}
+        </ul>
+      )}
     </section>
   );
+}
+
+/**
+ * Apply the active filters to the version list. The current version is always
+ * included so the user has a reference point.
+ */
+function filterVersions(
+  versions: AvailableVersion[],
+  currentVersion: string,
+  filters: FilterState,
+): AvailableVersion[] {
+  const current = parseVersion(currentVersion);
+  return versions.filter((v) => {
+    if (v.version === currentVersion) return true;
+
+    if (filters.tfm === 'compatible' && !v.isCompatible) return false;
+    if (!filters.includePrerelease && v.isPrerelease) return false;
+
+    if (current) {
+      const candidate = parseVersion(v.version);
+      if (candidate) {
+        // Allow versions older than current to remain visible (they're
+        // historical context). Apply update-level only to newer versions.
+        const isNewer = compareVersions(candidate, current) > 0;
+        if (isNewer) {
+          if (filters.updateLevel === 'patch') {
+            if (candidate.major !== current.major || candidate.minor !== current.minor) {
+              return false;
+            }
+          } else if (filters.updateLevel === 'minor') {
+            if (candidate.major !== current.major) return false;
+          }
+        }
+      }
+    }
+    return true;
+  });
+}
+
+interface ParsedVersion {
+  major: number;
+  minor: number;
+  patch: number;
+  prerelease: boolean;
+}
+
+function parseVersion(s: string): ParsedVersion | undefined {
+  const m = /^(\d+)\.(\d+)(?:\.(\d+))?(?:\.\d+)?(?:-[\w.+-]+)?$/.exec(s.trim());
+  if (!m) return undefined;
+  return {
+    major: Number(m[1]),
+    minor: Number(m[2]),
+    patch: Number(m[3] ?? 0),
+    prerelease: s.includes('-'),
+  };
+}
+
+function compareVersions(a: ParsedVersion, b: ParsedVersion): number {
+  if (a.major !== b.major) return a.major - b.major;
+  if (a.minor !== b.minor) return a.minor - b.minor;
+  if (a.patch !== b.patch) return a.patch - b.patch;
+  // Stable > prerelease at same x.y.z
+  if (a.prerelease !== b.prerelease) return a.prerelease ? -1 : 1;
+  return 0;
 }
 
 function DetailVersionRow({
