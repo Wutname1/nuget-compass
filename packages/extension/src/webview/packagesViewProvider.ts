@@ -1,9 +1,11 @@
 import * as vscode from 'vscode';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { HostMessage, ViewMessage, FilterState } from '@nuget-compass/shared';
+import type { HostMessage, PackageRow, ViewMessage, FilterState } from '@nuget-compass/shared';
 import { defaultFilterState } from '@nuget-compass/shared';
 import { logger } from '../logging/logger.js';
+import { scanWorkspace } from '../dotnet/scan.js';
+import { DotnetNotFoundError } from '../dotnet/exec.js';
 
 export class PackagesViewProvider implements vscode.WebviewViewProvider {
   static readonly viewType = 'nuget-compass.packages';
@@ -28,10 +30,45 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   }
 
   refresh(): void {
+    void this.runRefresh();
+  }
+
+  private async runRefresh(): Promise<void> {
     this.post({ type: 'host:status', status: 'scanning' });
-    // Real scan logic lands in a later commit. For now, this stub just clears state.
-    this.post({ type: 'host:projects', projects: [] });
-    this.post({ type: 'host:status', status: 'idle' });
+    const showTransitive = this.loadFilters().showTransitive;
+    try {
+      const result = await scanWorkspace({ includeTransitive: showTransitive });
+      this.post({ type: 'host:projects', projects: result.projects });
+
+      // For each project, push the installed packages as PackageRows so the
+      // panel renders something immediately. Available-versions and badges
+      // arrive in later milestones.
+      for (const project of result.projects) {
+        const rows: PackageRow[] = project.packages
+          .filter((p) => showTransitive || !p.isTransitive)
+          .map((pkg) => ({ projectPath: project.path, package: pkg }));
+        this.post({ type: 'host:packageRows', projectPath: project.path, rows });
+      }
+
+      if (result.errors.length > 0) {
+        const detail = result.errors.map((e) => `${e.projectPath}: ${e.message}`).join('\n');
+        this.post({
+          type: 'host:error',
+          message: `Scan completed with ${result.errors.length} error(s).`,
+          detail,
+        });
+      }
+    } catch (err) {
+      if (err instanceof DotnetNotFoundError) {
+        this.post({ type: 'host:error', message: err.message });
+      } else {
+        const message = err instanceof Error ? err.message : String(err);
+        logger.error('refresh failed', err);
+        this.post({ type: 'host:error', message: 'Scan failed.', detail: message });
+      }
+    } finally {
+      this.post({ type: 'host:status', status: 'idle' });
+    }
   }
 
   private handleViewMessage(msg: ViewMessage): void {

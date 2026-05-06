@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "parameters": "",
+  "projects": [
+    {
+      "path": "C:/code/nuget-compass/fixtures/net8-mixed-versions/TestApp.csproj",
+      "frameworks": [
+        {
+          "framework": "net8.0",
+          "topLevelPackages": [
+            {
+              "id": "AutoMapper",
+              "requestedVersion": "12.0.1",
+              "resolvedVersion": "12.0.1"
+            },
+            {
+              "id": "Dapper",
+              "requestedVersion": "2.1.21",
+              "resolvedVersion": "2.1.21"
+            },
+            {
+              "id": "FluentValidation",
+              "requestedVersion": "11.8.0",
+              "resolvedVersion": "11.8.0"
+            },
+            {
+              "id": "MediatR",
+              "requestedVersion": "12.2.0",
+              "resolvedVersion": "12.2.0"
+            },
+            {
+              "id": "Microsoft.EntityFrameworkCore",
+              "requestedVersion": "8.0.0",
+              "resolvedVersion": "8.0.0"
+            },
+            {
+              "id": "Microsoft.Extensions.Configuration",
+              "requestedVersion": "8.0.0",
+              "resolvedVersion": "8.0.0"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection",
+              "requestedVersion": "8.0.0",
+              "resolvedVersion": "8.0.0"
+            },
+            {
+              "id": "Microsoft.Extensions.Logging",
+              "requestedVersion": "8.0.0",
+              "resolvedVersion": "8.0.0"
+            },
+            {
+              "id": "Newtonsoft.Json",
+              "requestedVersion": "13.0.1",
+              "resolvedVersion": "13.0.1"
+            },
+            {
+              "id": "Polly",
+              "requestedVersion": "8.2.0",
+              "resolvedVersion": "8.2.0"
+            },
+            {
+              "id": "Serilog",
+              "requestedVersion": "3.1.1",
+              "resolvedVersion": "3.1.1"
+            },
+            {
+              "id": "System.Text.Json",
+              "requestedVersion": "8.0.0",
+              "resolvedVersion": "8.0.0"
+            },
+            {
+              "id": "xunit",
+              "requestedVersion": "2.6.0",
+              "resolvedVersion": "2.6.0"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

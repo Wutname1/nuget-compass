@@ -57,3 +57,16 @@ dotnet package list --vulnerable --format json
 - Do **not** run `dotnet outdated` and accept fixes here. The point of this fixture is that packages are *out of date.*
 - If new .NET versions release and these packages no longer demonstrate the TFM trap, update the matrix above and re-pin to whatever versions reproduce the same scenarios.
 - The `bin/` and `obj/` directories are in `.gitignore`; restore is on-demand.
+
+### Captured SDK output
+
+`packages/extension/src/dotnet/__fixtures__/` contains JSON snapshots of `dotnet package list` output against this project. Used by unit tests so the parser doesn't need a working .NET install at test time.
+
+To regenerate after pinning new package versions:
+
+```bash
+cd fixtures/net8-mixed-versions
+dotnet restore
+dotnet package list --format json > ../../packages/extension/src/dotnet/__fixtures__/net8-installed.json
+dotnet package list --include-transitive --format json > ../../packages/extension/src/dotnet/__fixtures__/net8-installed-with-transitive.json
+```
