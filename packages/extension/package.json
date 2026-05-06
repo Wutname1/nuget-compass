@@ -20,7 +20,7 @@
   ],
   "contributes": {
     "viewsContainers": {
-      "activitybar": [
+      "panel": [
         {
           "id": "nuget-compass",
           "title": "NuGet Compass",
