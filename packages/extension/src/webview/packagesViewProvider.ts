@@ -335,6 +335,12 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       case 'view:fetchReadme':
         void this.handleFetchReadme(msg.packageId, msg.version, msg.readmeUrl);
         return;
+      case 'view:openSettings':
+        void vscode.commands.executeCommand(
+          'workbench.action.openSettings',
+          '@ext:wutname1.nuget-compass',
+        );
+        return;
     }
   }
 
@@ -859,7 +865,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       `default-src 'none'`,
       `style-src ${webview.cspSource} 'unsafe-inline'`,
       `script-src 'nonce-${nonce}'`,
-      `img-src ${webview.cspSource} data:`,
+      `img-src ${webview.cspSource} data: https:`,
       `connect-src https://api.nuget.org`,
       `font-src ${webview.cspSource}`,
     ].join('; ');

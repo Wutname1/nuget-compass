@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import type {
   AvailableVersion,
   FilterState,
@@ -9,6 +11,8 @@ import type { AggregatedPackage, PackageInstall } from '../state/aggregate.js';
 import { vscode } from '../vscode.js';
 import { readmeKey, type ReadmeState, type SearchHit } from '../state/reducer.js';
 import { NuGetLogo, PackageIcon } from './icons.js';
+
+marked.setOptions({ gfm: true, breaks: false });
 
 type DetailContext = 'installed' | 'browse' | 'updates';
 
@@ -397,7 +401,11 @@ function ProjectsRow({
         <span>{install.projectName}</span>
         <span className="matrix-tfm">{install.targetFrameworks.join('; ')}</span>
         {install.vulnerability && install.vulnerability.length > 0 ? (
-          <span className="badge badge-vuln" style={{ fontSize: 'calc(8.5px * var(--ngc-font-scale))' }}>
+          <span
+            className="badge badge-vuln"
+            style={{ fontSize: 'calc(8.5px * var(--ngc-font-scale))' }}
+            title="Has a known security problem in this project. Update to a fixed version."
+          >
             ⚠
           </span>
         ) : null}
@@ -682,7 +690,21 @@ function ReadmeTab({
       </p>
     );
   }
-  return <pre className="readme-body">{readme.body}</pre>;
+  return <ReadmeBody body={readme.body ?? ''} contentType={readme.contentType} />;
+}
+
+function ReadmeBody({
+  body,
+  contentType,
+}: {
+  body: string;
+  contentType?: 'markdown' | 'html' | 'error';
+}): JSX.Element {
+  const html = useMemo(() => {
+    const raw = contentType === 'html' ? body : (marked.parse(body, { async: false }) as string);
+    return DOMPurify.sanitize(raw, { USE_PROFILES: { html: true } });
+  }, [body, contentType]);
+  return <div className="readme-body markdown-body" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 /* ─────────────────────────────────────────
