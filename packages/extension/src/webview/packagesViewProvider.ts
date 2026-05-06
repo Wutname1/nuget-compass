@@ -15,6 +15,9 @@ import { DotnetNotFoundError } from '../dotnet/exec.js';
 import { runOutdatedScan, type OutdatedRow } from '../dotnet/outdated.js';
 import { createCatalogClient, type NuGetCatalogClient } from '../nuget/catalogClient.js';
 import { resolveAvailableVersions } from '../nuget/versionResolver.js';
+import { scanVulnerabilities } from '../dotnet/vulnerable.js';
+import { scanDeprecations } from '../dotnet/deprecated.js';
+import { addPackage } from '../dotnet/addPackage.js';
 
 export class PackagesViewProvider implements vscode.WebviewViewProvider {
   static readonly viewType = 'nuget-compass.packages';
@@ -73,12 +76,11 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         });
       }
 
-      // Second paint: enrich with newestAllowed via the SDK's outdated check.
-      // This is target-framework BLIND - the dropdown's TFM filter only takes
-      // effect when the user expands a row and we hit the catalog API.
+      // Second paint: enrich with newestAllowed (TFM-blind) plus vulnerability
+      // and deprecation badges. Three SDK calls per project, all in parallel.
       this.post({ type: 'host:status', status: 'fetching' });
       await Promise.all(
-        result.projects.map((project) => this.enrichOutdated(project, filters)),
+        result.projects.map((project) => this.enrichProject(project, filters)),
       );
     } catch (err) {
       if (err instanceof DotnetNotFoundError) {
@@ -93,31 +95,59 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private async enrichOutdated(project: Project, filters: FilterState): Promise<void> {
-    let outdated: OutdatedRow[] = [];
-    try {
-      outdated = await runOutdatedScan(project.path, path.dirname(project.path), {
+  private async enrichProject(project: Project, filters: FilterState): Promise<void> {
+    const cwd = path.dirname(project.path);
+
+    // Run the three scans in parallel; any single failure degrades that
+    // signal but doesn't abort the others.
+    const [outdatedResult, vulnsResult, depsResult] = await Promise.allSettled([
+      runOutdatedScan(project.path, cwd, {
         updateLevel: filters.updateLevel,
         includePrerelease: filters.includePrerelease,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      logger.warn(`outdated scan failed for ${project.path}: ${message}`);
-      return;
-    }
+      }),
+      scanVulnerabilities(project.path, cwd),
+      scanDeprecations(project.path, cwd),
+    ]);
 
     const latestById = new Map<string, string>();
-    for (const row of outdated) {
-      if (row.latestVersion) latestById.set(row.packageId, row.latestVersion);
+    if (outdatedResult.status === 'fulfilled') {
+      for (const row of outdatedResult.value as OutdatedRow[]) {
+        if (row.latestVersion) latestById.set(row.packageId, row.latestVersion);
+      }
+    } else {
+      logger.warn(
+        `outdated scan failed for ${project.path}: ${describeReason(outdatedResult.reason)}`,
+      );
     }
+
+    const vulnsByKey =
+      vulnsResult.status === 'fulfilled'
+        ? vulnsResult.value
+        : (logger.warn(
+            `vulnerability scan failed for ${project.path}: ${describeReason(vulnsResult.reason)}`,
+          ),
+          new Map());
+    const depsByKey =
+      depsResult.status === 'fulfilled'
+        ? depsResult.value
+        : (logger.warn(
+            `deprecation scan failed for ${project.path}: ${describeReason(depsResult.reason)}`,
+          ),
+          new Map());
 
     const rows: PackageRow[] = project.packages
       .filter((p) => filters.showTransitive || !p.isTransitive)
-      .map((pkg) => ({
-        projectPath: project.path,
-        package: pkg,
-        newestAllowed: latestById.get(pkg.id),
-      }));
+      .map((pkg) => {
+        const key = `${project.path}::${pkg.id}`;
+        const row: PackageRow = { projectPath: project.path, package: pkg };
+        const latest = latestById.get(pkg.id);
+        if (latest !== undefined) row.newestAllowed = latest;
+        const vulns = vulnsByKey.get(key);
+        if (vulns) row.vulnerability = vulns;
+        const dep = depsByKey.get(key);
+        if (dep) row.deprecation = dep;
+        return row;
+      });
 
     this.post({ type: 'host:packageRows', projectPath: project.path, rows });
   }
@@ -182,8 +212,68 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         void this.expandPackage(msg.projectPath, msg.packageId);
         return;
       case 'view:updatePackage':
-        // TODO: run `dotnet add package <id> --version <v>`
+        void this.updatePackage(msg.projectPath, msg.packageId, msg.toVersion);
         return;
+    }
+  }
+
+  private async updatePackage(
+    projectPath: string,
+    packageId: string,
+    toVersion: string,
+  ): Promise<void> {
+    const project = this.lastProjects.find((p) => p.path === projectPath);
+    if (!project) {
+      logger.warn(`updatePackage: unknown project ${projectPath}`);
+      return;
+    }
+    const pkg = project.packages.find((x) => x.id === packageId);
+    if (!pkg) {
+      logger.warn(`updatePackage: ${packageId} not found in ${projectPath}`);
+      return;
+    }
+
+    const choice = await vscode.window.showInformationMessage(
+      `Update ${packageId} from ${pkg.resolvedVersion} to ${toVersion}?`,
+      { modal: true },
+      'Update',
+    );
+    if (choice !== 'Update') return;
+
+    this.post({ type: 'host:status', status: 'fetching' });
+    try {
+      const result = await addPackage(
+        projectPath,
+        path.dirname(projectPath),
+        packageId,
+        toVersion,
+      );
+      if (!result.success) {
+        logger.error(`update failed: ${result.output}`);
+        this.post({
+          type: 'host:error',
+          message: `Could not update ${packageId} to ${toVersion}.`,
+          detail: result.output,
+        });
+        // Surface the SDK output channel so the user can see NU-codes inline.
+        logger.show();
+        return;
+      }
+      logger.info(`updated ${packageId} -> ${toVersion}`);
+      void vscode.window.showInformationMessage(`Updated ${packageId} to ${toVersion}.`);
+      // Re-scan to reflect the new resolvedVersion. Cheaper than refreshing
+      // the whole workspace, but using the existing path keeps the code small.
+      this.refresh();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error('updatePackage failed', err);
+      this.post({
+        type: 'host:error',
+        message: `Could not update ${packageId}.`,
+        detail: message,
+      });
+    } finally {
+      this.post({ type: 'host:status', status: 'idle' });
     }
   }
 
@@ -267,6 +357,10 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   <p>${escapeHtml(message)}</p>
 </body></html>`;
   }
+}
+
+function describeReason(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
 
 function generateNonce(): string {

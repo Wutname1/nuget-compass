@@ -144,8 +144,8 @@ body {
 
 .package-row {
   display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 0.75rem;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 0.5rem 0.75rem;
   align-items: center;
   width: 100%;
   padding: 0.35rem 0.75rem;
@@ -157,6 +157,12 @@ body {
   cursor: pointer;
   text-align: left;
   font-family: inherit;
+}
+
+.row-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .package-row:hover {
@@ -238,6 +244,66 @@ body {
   background: var(--vscode-inputValidation-errorBackground, rgba(220, 50, 50, 0.2));
   color: var(--vscode-inputValidation-errorForeground, inherit);
   border: 1px solid var(--vscode-inputValidation-errorBorder, transparent);
+}
+
+.badge-vuln {
+  border: 1px solid transparent;
+}
+
+.badge-vuln-low {
+  background: var(--vscode-charts-blue, rgba(0, 122, 204, 0.18));
+  color: var(--vscode-foreground);
+}
+
+.badge-vuln-moderate {
+  background: var(--vscode-charts-yellow, rgba(220, 180, 0, 0.22));
+  color: var(--vscode-foreground);
+}
+
+.badge-vuln-high {
+  background: var(--vscode-charts-orange, rgba(220, 120, 0, 0.28));
+  color: var(--vscode-foreground);
+}
+
+.badge-vuln-critical {
+  background: var(--vscode-charts-red, rgba(220, 50, 50, 0.32));
+  color: var(--vscode-foreground);
+}
+
+.badge-deprecated {
+  background: var(--vscode-disabledForeground, rgba(128, 128, 128, 0.2));
+  color: var(--vscode-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.65rem;
+}
+
+.version-button {
+  background: transparent;
+  border: none;
+  color: var(--vscode-textLink-foreground);
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.version-button:hover {
+  text-decoration: underline;
+}
+
+.version-button.version-incompatible {
+  color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.version-button.version-incompatible:hover {
+  text-decoration: line-through;
 }
 
 .package-name {

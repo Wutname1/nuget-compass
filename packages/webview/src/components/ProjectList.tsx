@@ -1,4 +1,10 @@
-import type { AvailableVersion, PackageRow, Project } from '@nuget-compass/shared';
+import type {
+  AvailableVersion,
+  DeprecationInfo,
+  PackageRow,
+  Project,
+  VulnerabilityInfo,
+} from '@nuget-compass/shared';
 import { vscode } from '../vscode.js';
 import { packageKey } from '../state/reducer.js';
 
@@ -98,9 +104,15 @@ function PackageRows({
               ) : (
                 <span />
               )}
+              <RowBadges vulnerability={row.vulnerability} deprecation={row.deprecation} />
             </button>
             {isOpen ? (
-              <VersionList versions={versions} currentVersion={row.package.resolvedVersion} />
+              <VersionList
+                projectPath={projectPath}
+                packageId={row.package.id}
+                currentVersion={row.package.resolvedVersion}
+                versions={versions}
+              />
             ) : null}
           </li>
         );
@@ -109,12 +121,67 @@ function PackageRows({
   );
 }
 
-function VersionList({
-  versions,
-  currentVersion,
+function RowBadges({
+  vulnerability,
+  deprecation,
 }: {
-  versions: AvailableVersion[] | undefined;
+  vulnerability?: VulnerabilityInfo[];
+  deprecation?: DeprecationInfo;
+}): JSX.Element | null {
+  const hasVuln = vulnerability && vulnerability.length > 0;
+  if (!hasVuln && !deprecation) return null;
+
+  const highest = hasVuln ? highestSeverity(vulnerability) : undefined;
+
+  return (
+    <span className="row-badges">
+      {hasVuln ? (
+        <span
+          className={`badge badge-vuln badge-vuln-${highest!.toLowerCase()}`}
+          title={vulnerability.map((v) => `${v.severity}: ${v.advisoryUrl}`).join('\n')}
+        >
+          ⚠ {highest}
+        </span>
+      ) : null}
+      {deprecation ? (
+        <span
+          className="badge badge-deprecated"
+          title={[
+            `Deprecated: ${deprecation.reasons.join(', ')}`,
+            deprecation.message ? `\n${deprecation.message}` : '',
+            deprecation.alternatePackage
+              ? `\nReplaced by: ${deprecation.alternatePackage.id} ${deprecation.alternatePackage.versionRange}`
+              : '',
+          ]
+            .filter(Boolean)
+            .join('')}
+        >
+          deprecated
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function highestSeverity(vulns: VulnerabilityInfo[]): VulnerabilityInfo['severity'] {
+  const order: VulnerabilityInfo['severity'][] = ['Low', 'Moderate', 'High', 'Critical'];
+  let best: VulnerabilityInfo['severity'] = 'Low';
+  for (const v of vulns) {
+    if (order.indexOf(v.severity) > order.indexOf(best)) best = v.severity;
+  }
+  return best;
+}
+
+function VersionList({
+  projectPath,
+  packageId,
+  currentVersion,
+  versions,
+}: {
+  projectPath: string;
+  packageId: string;
   currentVersion: string;
+  versions: AvailableVersion[] | undefined;
 }): JSX.Element {
   if (!versions) {
     return (
@@ -130,7 +197,6 @@ function VersionList({
       </div>
     );
   }
-  // Show the top 25 plus "current" no matter where it falls.
   const top = versions.slice(0, 25);
   const includesCurrent = top.some((v) => v.version === currentVersion);
   const list =
@@ -140,37 +206,58 @@ function VersionList({
 
   return (
     <ul className="version-list">
-      {list.map((v) => (
-        <li key={v.version} className="version-row">
-          <span
-            className={
-              'version-string ' +
-              (v.version === currentVersion ? 'version-current' : '') +
-              (!v.isCompatible ? ' version-incompatible' : '')
-            }
-          >
-            {v.version}
-            {v.isPrerelease ? <span className="badge badge-prerelease">prerelease</span> : null}
-            {v.version === currentVersion ? <span className="muted"> (current)</span> : null}
-          </span>
-          <span className="version-meta">
-            {!v.isCompatible && v.supportedFrameworks.length > 0 ? (
-              <span className="badge badge-incompatible">
-                ✗ Requires {v.supportedFrameworks.join(', ')}
+      {list.map((v) => {
+        const isCurrent = v.version === currentVersion;
+        const clickable = !isCurrent;
+        const className =
+          'version-string ' +
+          (isCurrent ? 'version-current' : '') +
+          (!v.isCompatible ? ' version-incompatible' : '');
+        return (
+          <li key={v.version} className="version-row">
+            {clickable ? (
+              <button
+                type="button"
+                className={`version-button ${className}`}
+                onClick={() =>
+                  vscode.postMessage({
+                    type: 'view:updatePackage',
+                    projectPath,
+                    packageId,
+                    toVersion: v.version,
+                  })
+                }
+              >
+                {v.version}
+                {v.isPrerelease ? <span className="badge badge-prerelease">prerelease</span> : null}
+              </button>
+            ) : (
+              <span className={className}>
+                {v.version}
+                {v.isPrerelease ? <span className="badge badge-prerelease">prerelease</span> : null}
+                <span className="muted"> (current)</span>
               </span>
-            ) : null}
-            {v.isCompatible && v.supportedFrameworks.length > 0 ? (
-              <span className="muted version-tfms">{v.supportedFrameworks.join(', ')}</span>
-            ) : null}
-            {v.published ? <span className="muted version-date">{formatDate(v.published)}</span> : null}
-          </span>
-        </li>
-      ))}
+            )}
+            <span className="version-meta">
+              {!v.isCompatible && v.supportedFrameworks.length > 0 ? (
+                <span className="badge badge-incompatible">
+                  ✗ Requires {v.supportedFrameworks.join(', ')}
+                </span>
+              ) : null}
+              {v.isCompatible && v.supportedFrameworks.length > 0 ? (
+                <span className="muted version-tfms">{v.supportedFrameworks.join(', ')}</span>
+              ) : null}
+              {v.published ? (
+                <span className="muted version-date">{formatDate(v.published)}</span>
+              ) : null}
+            </span>
+          </li>
+        );
+      })}
     </ul>
   );
 }
 
 function formatDate(iso: string): string {
-  // YYYY-MM-DD; keep simple, no locale concerns.
   return iso.slice(0, 10);
 }

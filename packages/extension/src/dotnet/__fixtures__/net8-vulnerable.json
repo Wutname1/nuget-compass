@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "parameters": "--vulnerable",
+  "sources": [
+    "https://api.nuget.org/v3/index.json",
+    "C:/Program Files (x86)/Microsoft SDKs/NuGetPackages/"
+  ],
+  "projects": [
+    {
+      "path": "C:/code/nuget-compass/fixtures/net8-mixed-versions/TestApp.csproj",
+      "frameworks": [
+        {
+          "framework": "net8.0",
+          "topLevelPackages": [
+            {
+              "id": "AutoMapper",
+              "requestedVersion": "12.0.1",
+              "resolvedVersion": "12.0.1",
+              "vulnerabilities": [
+                {
+                  "severity": "High",
+                  "advisoryurl": "https://github.com/advisories/GHSA-rvv3-g6hj-g44x"
+                }
+              ]
+            },
+            {
+              "id": "System.Text.Json",
+              "requestedVersion": "8.0.0",
+              "resolvedVersion": "8.0.0",
+              "vulnerabilities": [
+                {
+                  "severity": "High",
+                  "advisoryurl": "https://github.com/advisories/GHSA-hh2w-p6rv-4g7w"
+                },
+                {
+                  "severity": "High",
+                  "advisoryurl": "https://github.com/advisories/GHSA-8g4q-xg66-9fp4"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

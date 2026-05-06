@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "parameters": "--deprecated",
+  "sources": [
+    "https://api.nuget.org/v3/index.json",
+    "C:/Program Files (x86)/Microsoft SDKs/NuGetPackages/"
+  ],
+  "projects": [
+    {
+      "path": "C:/code/nuget-compass/fixtures/net8-mixed-versions/TestApp.csproj",
+      "frameworks": [
+        {
+          "framework": "net8.0",
+          "topLevelPackages": [
+            {
+              "id": "xunit",
+              "requestedVersion": "2.6.0",
+              "resolvedVersion": "2.6.0",
+              "deprecationReasons": [
+                "Legacy"
+              ],
+              "alternativePackage": {
+                "id": "xunit.v3",
+                "versionRange": ">= 0.0.0"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
