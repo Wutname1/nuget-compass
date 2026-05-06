@@ -33,20 +33,38 @@ export function DetailPanel({
   return (
     <div className="detail-content">
       <header className="detail-header">
-        <div>
+        <div className="detail-header-text">
           <h2 className="detail-title">{row.package.id}</h2>
           <p className="muted detail-subtitle">
             {project.name} · {row.package.resolvedVersion}
           </p>
         </div>
-        <button
-          type="button"
-          className="icon-button"
-          title="Close detail panel"
-          onClick={onClose}
-        >
-          ×
-        </button>
+        <div className="detail-header-actions">
+          {!row.package.isTransitive ? (
+            <button
+              type="button"
+              className="package-action package-action-danger"
+              title={`Uninstall ${row.package.id}`}
+              onClick={() =>
+                vscode.postMessage({
+                  type: 'view:uninstallPackage',
+                  projectPath: row.projectPath,
+                  packageId: row.package.id,
+                })
+              }
+            >
+              Uninstall
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="icon-button"
+            title="Close detail panel"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </div>
       </header>
 
       <DescriptionSection versions={versions} />

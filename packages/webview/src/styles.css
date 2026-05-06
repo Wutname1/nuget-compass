@@ -82,6 +82,17 @@ body {
   gap: 0.5rem;
 }
 
+.detail-header-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.detail-header-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
 .detail-title {
   margin: 0;
   font-size: 1rem;
