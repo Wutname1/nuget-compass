@@ -3,14 +3,30 @@
   "displayName": "NuGet Compass",
   "description": "NuGet for VS Code, with target framework filtering that actually works.",
   "version": "0.0.1",
-  "private": true,
-  "publisher": "TBD",
+  "publisher": "wutname1",
   "license": "MIT",
+  "icon": "resources/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Wutname1/nuget-compass.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Wutname1/nuget-compass/issues"
+  },
+  "homepage": "https://github.com/Wutname1/nuget-compass#readme",
   "engines": {
     "vscode": "^1.95.0"
   },
-  "categories": ["Other"],
-  "keywords": ["nuget", "dotnet", "csharp", "package manager", "tfm"],
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "nuget",
+    "dotnet",
+    "csharp",
+    "package manager",
+    "tfm"
+  ],
   "main": "./dist/extension.cjs",
   "activationEvents": [
     "onView:nuget-compass.packages",
@@ -24,7 +40,7 @@
         {
           "id": "nuget-compass",
           "title": "NuGet Compass",
-          "icon": "./resources/compass.svg"
+          "icon": "./resources/icon.svg"
         }
       ]
     },
@@ -58,7 +74,11 @@
       "properties": {
         "nuget-compass.updateLevel": {
           "type": "string",
-          "enum": ["patch", "minor", "major"],
+          "enum": [
+            "patch",
+            "minor",
+            "major"
+          ],
           "default": "minor",
           "description": "How aggressively to suggest updates. 'patch' = same major.minor; 'minor' = same major; 'major' = any newer version."
         },
@@ -69,7 +89,10 @@
         },
         "nuget-compass.tfmFilter": {
           "type": "string",
-          "enum": ["compatible", "all"],
+          "enum": [
+            "compatible",
+            "all"
+          ],
           "default": "compatible",
           "description": "Target framework filter. 'compatible' hides versions that don't target your project's framework; 'all' shows every version with incompatibility marked."
         },
