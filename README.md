@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="heroimage.png" alt="NuGet Compass" />
+  <img src="https://cdn.spartanui.net/nuget-compass/heroimage.png" alt="NuGet Compass" />
 </p>
 
 # nuget-compass
