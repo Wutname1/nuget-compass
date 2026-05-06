@@ -14,7 +14,7 @@ Default NuGet package manager UIs show the "latest" version of every package reg
 
 NuGet Compass is built around the assumption that **every version offered to you should be one you can actually install**.
 
-## Features (v0.0.1)
+## Features (v0.2.x)
 
 - Lists installed packages from `.csproj`, `.fsproj`, and `.vbproj` projects
 - Reads your project's `<TargetFramework>` directly from MSBuild

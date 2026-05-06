@@ -3,11 +3,12 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - '*.*.*'
 
 jobs:
   publish-release:
     runs-on: ubuntu-latest
+    if: "!contains(github.ref_name, '-')"
     permissions:
       contents: write
     steps:

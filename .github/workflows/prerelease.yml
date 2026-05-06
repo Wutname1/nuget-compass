@@ -2,12 +2,14 @@ name: Pre-release
 
 on:
   push:
-    branches: [master]
+    tags:
+      - '*.*.*-*'
 
 jobs:
   publish-prerelease:
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[skip prerelease]')"
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -22,28 +24,34 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Compute pre-release version
+      - name: Resolve tag version
         id: ver
-        working-directory: packages/extension
         run: |
-          BASE=$(node -p "require('./package.json').version")
-          MAJOR=$(echo "$BASE" | cut -d. -f1)
-          MINOR=$(echo "$BASE" | cut -d. -f2)
-          if [ $((MINOR % 2)) -eq 0 ]; then
-            MINOR=$((MINOR + 1))
-          fi
-          PRE_VERSION="${MAJOR}.${MINOR}.${GITHUB_RUN_NUMBER}"
-          echo "version=${PRE_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Pre-release version: ${PRE_VERSION}"
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
 
-      - name: Set version and publish pre-release
+      - name: Package VSIX
+        working-directory: packages/extension
+        run: npx vsce package ${{ steps.ver.outputs.version }} --pre-release --no-dependencies --no-git-tag-version --out nuget-compass-${{ steps.ver.outputs.version }}.vsix
+
+      - name: Publish pre-release to Marketplace
         working-directory: packages/extension
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: |
-          npx vsce publish ${{ steps.ver.outputs.version }} --pre-release --no-dependencies --no-git-tag-version
+        run: npx vsce publish --pre-release --packagePath nuget-compass-${{ steps.ver.outputs.version }}.vsix
+
+      - name: Create GitHub pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: ${{ steps.ver.outputs.tag }}
+          prerelease: true
+          generate_release_notes: true
+          files: packages/extension/nuget-compass-${{ steps.ver.outputs.version }}.vsix
