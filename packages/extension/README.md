@@ -6,6 +6,8 @@
 
 NuGet for VS Code, with target framework filtering that actually works.
 
+> ⚠️ **Early testing.** This extension is in early testing and the API, settings, and UI may change without notice. Bug reports and feedback are very welcome.
+
 ## Why
 
 Default NuGet package manager UIs show the "latest" version of every package regardless of whether it actually targets your project's framework. On a `net8.0` project, you'll see `net10.0`-only packages offered as updates, and "Update All" happily tries to install them — usually resulting in `NU1202: Package X is not compatible with net8.0`.
