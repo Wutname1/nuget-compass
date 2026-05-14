@@ -111,6 +111,11 @@
           "default": 10000,
           "description": "Timeout for individual NuGet API requests, in milliseconds."
         },
+        "nuget-compass.dotnetCommandTimeoutMs": {
+          "type": "number",
+          "default": 120000,
+          "description": "Timeout for `dotnet package list` and related subprocess calls, in milliseconds. Increase if scans of large solutions or projects with many ProjectReferences time out."
+        },
         "nuget-compass.maxConcurrentCatalogRequests": {
           "type": "number",
           "default": 8,

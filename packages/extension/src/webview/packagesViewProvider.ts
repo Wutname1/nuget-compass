@@ -95,7 +95,12 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
 
       // Always fetch transitives. The webview filters them per the user's
       // current "Show transitive" toggle without needing a refetch.
-      const result = await scanWorkspace({ includeTransitive: true, extraEnv });
+      const timeoutMs = this.dotnetCommandTimeoutMs();
+      const result = await scanWorkspace({
+        includeTransitive: true,
+        extraEnv,
+        timeoutMs,
+      });
       this.lastProjects = result.projects;
       this.lastRowsByProject.clear();
       this.post({ type: 'host:projects', projects: result.projects });
@@ -180,9 +185,10 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       }
     };
 
+    const timeoutMs = this.dotnetCommandTimeoutMs();
     const [vulnsResult, depsResult, newestResults] = await Promise.allSettled([
-      scanVulnerabilities(project.path, cwd),
-      scanDeprecations(project.path, cwd),
+      scanVulnerabilities(project.path, cwd, { timeoutMs }),
+      scanDeprecations(project.path, cwd, { timeoutMs }),
       Promise.all(
         visiblePackages.map(async (pkg) => {
           try {
@@ -810,6 +816,14 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         cfg.get<boolean>('includePrerelease') ?? defaultFilterState.includePrerelease,
       showTransitive: cfg.get<boolean>('showTransitive') ?? defaultFilterState.showTransitive,
     };
+  }
+
+  private dotnetCommandTimeoutMs(): number {
+    const raw = vscode.workspace
+      .getConfiguration('nuget-compass')
+      .get<number>('dotnetCommandTimeoutMs');
+    if (typeof raw !== 'number' || !Number.isFinite(raw) || raw <= 0) return 120_000;
+    return raw;
   }
 
   loadFontScale(): number {

@@ -26,7 +26,11 @@ export interface ScanError {
  * `errors[]` and the panel can surface it to the user.
  */
 export async function scanWorkspace(
-  options: { includeTransitive?: boolean; extraEnv?: Record<string, string> } = {},
+  options: {
+    includeTransitive?: boolean;
+    extraEnv?: Record<string, string>;
+    timeoutMs?: number;
+  } = {},
 ): Promise<ScanResult> {
   const folders = vscode.workspace.workspaceFolders;
   if (!folders || folders.length === 0) {
@@ -48,6 +52,7 @@ export async function scanWorkspace(
           const { data, output } = await listPackagesWithOutput(uri.fsPath, cwd, {
             includeTransitive: options.includeTransitive,
             extraEnv: options.extraEnv,
+            timeoutMs: options.timeoutMs,
           });
           const projects = projectsFromPackageListJson(data, options);
           // Decorate with CPM and lock-file detection (filesystem walks).

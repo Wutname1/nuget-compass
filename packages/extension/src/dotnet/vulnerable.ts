@@ -17,10 +17,12 @@ const VALID_SEVERITIES: ReadonlySet<VulnerabilityInfo['severity']> = new Set([
 export async function scanVulnerabilities(
   projectPath: string,
   cwd: string,
+  options: { timeoutMs?: number } = {},
 ): Promise<VulnerabilitiesByPackage> {
   const result = await runDotnet(
     ['package', 'list', '--project', projectPath, '--vulnerable', '--format', 'json'],
     cwd,
+    options.timeoutMs,
   );
   if (result.code !== 0 && result.stdout.trim().length === 0) {
     throw new Error(
