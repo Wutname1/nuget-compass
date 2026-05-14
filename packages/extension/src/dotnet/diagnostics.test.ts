@@ -83,6 +83,36 @@ describe('parseDiagnosticsFromProblems', () => {
     expect(diags[0]?.fromVersion).toBe('2.0.0');
     expect(diags[0]?.toVersion).toBe('1.5.0');
   });
+
+  it('drops transient pre-restore complaints instead of surfacing them', () => {
+    const diags = parseDiagnosticsFromProblems('fallback.csproj', [
+      {
+        level: 'error',
+        project: 'C:/x/Foo.csproj',
+        text:
+          'Unable to read a package reference from the project `c:/x/Foo.csproj`. The project may not have been restored yet.',
+      },
+      {
+        level: 'error',
+        project: 'C:/x/Bar.csproj',
+        text: 'No assets file was found for `c:/x/Bar.csproj`. Run `dotnet restore`.',
+      },
+    ]);
+    expect(diags).toHaveLength(0);
+  });
+
+  it('surfaces code-less SDK problems under a distinct "SDK" code', () => {
+    const diags = parseDiagnosticsFromProblems('fallback.csproj', [
+      {
+        level: 'error',
+        project: 'C:/x/Foo.csproj',
+        text: 'Some other unrecognized SDK error that mentions no NU-code at all.',
+      },
+    ]);
+    expect(diags).toHaveLength(1);
+    expect(diags[0]?.code).toBe('SDK');
+    expect(diags[0]?.level).toBe('error');
+  });
 });
 
 describe('dedupeDiagnostics', () => {

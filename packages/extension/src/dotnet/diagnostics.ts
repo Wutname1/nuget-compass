@@ -103,14 +103,41 @@ export function parseDiagnosticsFromProblems(
   for (const p of problems) {
     const text = (p.text ?? '').trim();
     if (text.length === 0) continue;
+    if (isTransientSdkComplaint(text)) continue;
     const codeMatch = NU_CODE_RE.exec(text);
-    const code = codeMatch?.[1] ?? 'NU0000';
     const level: DiagnosticLevel =
       p.level === 'error' ? 'error' : p.level === 'warning' ? 'warning' : 'info';
-    const stripped = text.replace(/^.*?\bNU\d{4}\s*:\s*/, '').trim();
-    out.push(buildDiagnostic(code, level, p.project ?? fallbackProjectPath, stripped));
+    const projectPath = p.project ?? fallbackProjectPath;
+    if (codeMatch) {
+      const stripped = text.replace(/^.*?\bNU\d{4}\s*:\s*/, '').trim();
+      out.push(buildDiagnostic(codeMatch[1] ?? 'NU0000', level, projectPath, stripped));
+    } else {
+      // SDK problem with no NU-code (e.g. a structural project-load error).
+      // Surface it under a distinct code so it groups separately from real
+      // NuGet diagnostics — and skip code-less complaints quietly when they
+      // look like transient pre-restore noise.
+      out.push({
+        key: `SDK|${projectPath}|${text.slice(0, 80)}`,
+        code: 'SDK',
+        level,
+        projectPath,
+        message: text,
+      });
+    }
   }
   return out;
+}
+
+/**
+ * Some SDK `problems[]` entries are transient noise the user shouldn't see —
+ * messages emitted because we ran `dotnet package list` before restore had a
+ * chance to populate `obj/project.assets.json`. Restoring fixes them on the
+ * very next scan; surfacing them permanently as a diagnostic is misleading.
+ */
+function isTransientSdkComplaint(text: string): boolean {
+  return /Unable to read a package reference/i.test(text)
+    || /No assets file was found/i.test(text)
+    || /project\.assets\.json/i.test(text);
 }
 
 /**

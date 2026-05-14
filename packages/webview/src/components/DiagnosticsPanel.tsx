@@ -61,6 +61,11 @@ const CODE_META: Record<string, CodeMeta> = {
       'A <PackageReference> is already provided by the .NET SDK for this target framework. The explicit reference is unnecessary.',
     fixHint: 'Remove the explicit <PackageReference>.',
   },
+  SDK: {
+    title: '.NET SDK reported a problem',
+    blurb:
+      'The .NET SDK emitted a problem that is not a recognized NuGet (NU) code. Read the message for details.',
+  },
 };
 
 export function DiagnosticsPanel(props: Props): JSX.Element | null {
