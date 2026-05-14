@@ -43,8 +43,14 @@ class Logger {
         detail = opts.detail;
       } else if (errOrOptions instanceof Error) {
         detail = errOrOptions.stack ?? errOrOptions.message;
+      } else if (typeof errOrOptions === 'string') {
+        detail = errOrOptions;
       } else {
-        detail = String(errOrOptions);
+        try {
+          detail = JSON.stringify(errOrOptions);
+        } catch {
+          detail = Object.prototype.toString.call(errOrOptions);
+        }
       }
     }
     this.record('error', message, { ...(opts ?? {}), detail });

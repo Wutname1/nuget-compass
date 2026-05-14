@@ -132,6 +132,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
 
   private async runRefresh(): Promise<void> {
     this.post({ type: 'host:status', status: 'scanning' });
+    logger.info('Scanning workspace for .NET projects…', { category: 'scan' });
     const filters = this.loadFilters();
     try {
       // Resolve the current source list first so we know which env vars to
@@ -150,6 +151,10 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       });
       this.lastProjects = result.projects;
       this.lastRowsByProject.clear();
+      logger.info(
+        `Scan found ${result.projects.length} project(s); enriching package data…`,
+        { category: 'scan' },
+      );
       this.post({ type: 'host:projects', projects: result.projects });
 
       // Surface NuGet sources alongside the project list, decorated with
@@ -205,7 +210,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         this.post({ type: 'host:error', message: err.message });
       } else {
         const message = err instanceof Error ? err.message : String(err);
-        logger.error('refresh failed', err);
+        logger.error('Workspace scan failed.', err, { category: 'scan' });
         this.post({ type: 'host:error', message: 'Scan failed.', detail: message });
       }
     } finally {
@@ -486,37 +491,76 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       if (choice !== 'Update' && choice !== 'Pin') return;
     }
 
+    const ctx = {
+      projectName: project.name,
+      projectPath,
+      packageId,
+      version: toVersion,
+    };
+    logger.info(
+      `Updating ${packageId} ${pkg.resolvedVersion} → ${toVersion} in ${project.name}`,
+      { category: 'update', context: ctx },
+    );
+
     this.post({ type: 'host:status', status: 'fetching' });
     try {
       const result = await this.enqueueMutation(() =>
         addPackage(projectPath, path.dirname(projectPath), packageId, toVersion),
       );
       if (!result.success) {
-        logger.error(`update failed: ${result.output}`);
+        logger.error(`Update failed: ${packageId} → ${toVersion} in ${project.name}`, {
+          category: 'update',
+          context: ctx,
+          detail: result.output,
+        });
+        this.surfaceUpdateDiagnostics([projectPath], result.output);
         this.post({
           type: 'host:error',
           message: `Could not update ${packageId} to ${toVersion}.`,
           detail: result.output,
         });
-        // Surface the SDK output channel so the user can see NU-codes inline.
-        logger.show();
         return;
       }
-      logger.info(`updated ${packageId} -> ${toVersion}`);
+      logger.info(`Updated ${packageId} → ${toVersion} in ${project.name}`, {
+        category: 'update',
+        context: ctx,
+      });
       // Refresh is deferred until every queued mutation drains, so a bulk
       // update produces one workspace scan rather than N racing scans.
       this.refresh();
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      logger.error('updatePackage failed', err);
+      logger.error(`updatePackage threw for ${packageId}`, err, {
+        category: 'update',
+        context: ctx,
+      });
       this.post({
         type: 'host:error',
         message: `Could not update ${packageId}.`,
-        detail: message,
+        detail: err instanceof Error ? err.message : String(err),
       });
     } finally {
       this.post({ type: 'host:status', status: 'idle' });
     }
+  }
+
+  /**
+   * Parse SDK output for NU-codes and merge them into the diagnostics surface
+   * so the user sees actionable fixes during/after bulk updates, not just on
+   * the next full scan.
+   */
+  private surfaceUpdateDiagnostics(projectPaths: string[], output: string): void {
+    const fresh: NuDiagnostic[] = [];
+    for (const p of projectPaths) {
+      fresh.push(...parseDiagnosticsFromOutput(p, output));
+    }
+    if (fresh.length === 0) return;
+    const merged = dedupeDiagnostics([...this.lastDiagnostics, ...fresh]);
+    this.lastDiagnostics = merged;
+    this.post({
+      type: 'host:diagnostics',
+      diagnostics: merged,
+      suppressedCodes: this.suppressedCodes(),
+    });
   }
 
   private async updateAll(projectPath: string): Promise<void> {
@@ -546,40 +590,88 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     if (choice !== 'Update All') return;
 
     this.post({ type: 'host:status', status: 'fetching' });
+    logger.info(
+      `Starting Update All for ${project.name} (${rows.length} package(s))`,
+      { category: 'update', context: { projectName: project.name, projectPath } },
+    );
     const failures: string[] = [];
     try {
-      // Sequential to avoid SDK contention on the same project file.
-      for (const row of rows) {
-        const result = await this.enqueueMutation(() =>
-          addPackage(
-            projectPath,
-            path.dirname(projectPath),
-            row.package.id,
-            row.newestAllowed!,
-          ),
-        );
-        if (!result.success) {
-          failures.push(`${row.package.id} -> ${row.newestAllowed!}: ${firstLine(result.output)}`);
-          logger.error(`updateAll: ${row.package.id} failed: ${result.output}`);
-        } else {
-          logger.info(`updateAll: ${row.package.id} -> ${row.newestAllowed!}`);
-        }
-      }
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: `Updating packages in ${project.name}`,
+          cancellable: false,
+        },
+        async (progress) => {
+          // Sequential to avoid SDK contention on the same project file.
+          for (let i = 0; i < rows.length; i++) {
+            const row = rows[i]!;
+            const ctx = {
+              projectName: project.name,
+              projectPath,
+              packageId: row.package.id,
+              version: row.newestAllowed!,
+            };
+            progress.report({
+              message: `${row.package.id} (${i + 1}/${rows.length})`,
+              increment: 100 / rows.length,
+            });
+            logger.info(
+              `Updating ${row.package.id} ${row.package.resolvedVersion} → ${row.newestAllowed!} (${i + 1}/${rows.length})`,
+              { category: 'update', context: ctx },
+            );
+            const result = await this.enqueueMutation(() =>
+              addPackage(
+                projectPath,
+                path.dirname(projectPath),
+                row.package.id,
+                row.newestAllowed!,
+              ),
+            );
+            if (!result.success) {
+              failures.push(
+                `${row.package.id} -> ${row.newestAllowed!}: ${firstLine(result.output)}`,
+              );
+              logger.error(
+                `Update failed: ${row.package.id} → ${row.newestAllowed!}`,
+                { category: 'update', context: ctx, detail: result.output },
+              );
+              this.surfaceUpdateDiagnostics([projectPath], result.output);
+            } else {
+              logger.info(
+                `Updated ${row.package.id} → ${row.newestAllowed!}`,
+                { category: 'update', context: ctx },
+              );
+            }
+          }
+        },
+      );
     } finally {
       this.post({ type: 'host:status', status: 'idle' });
     }
 
     if (failures.length === 0) {
+      logger.info(`Update All complete: ${rows.length} package(s) updated.`, {
+        category: 'update',
+        context: { projectName: project.name, projectPath },
+      });
       void vscode.window.showInformationMessage(
         `Updated ${rows.length} package(s) in ${project.name}.`,
       );
     } else {
+      logger.warn(
+        `Update All finished with ${failures.length}/${rows.length} failure(s) in ${project.name}.`,
+        {
+          category: 'update',
+          context: { projectName: project.name, projectPath },
+          detail: failures.join('\n'),
+        },
+      );
       this.post({
         type: 'host:error',
-        message: `${failures.length} of ${rows.length} updates failed.`,
+        message: `${failures.length} of ${rows.length} updates failed. Open the Activity tab for details.`,
         detail: failures.join('\n'),
       });
-      logger.show();
     }
     this.refresh();
   }
@@ -592,23 +684,34 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     );
     if (choice !== 'Uninstall') return;
 
+    const ctx = { projectPath, packageId };
+    logger.info(`Uninstalling ${packageId}`, { category: 'remove', context: ctx });
     this.post({ type: 'host:status', status: 'fetching' });
     try {
       const result = await this.enqueueMutation(() =>
         removePackage(projectPath, path.dirname(projectPath), packageId),
       );
       if (!result.success) {
+        logger.error(`Uninstall failed: ${packageId}`, {
+          category: 'remove',
+          context: ctx,
+          detail: result.output,
+        });
         this.post({
           type: 'host:error',
           message: `Could not uninstall ${packageId}.`,
           detail: result.output,
         });
-        logger.show();
         return;
       }
+      logger.info(`Uninstalled ${packageId}`, { category: 'remove', context: ctx });
       void vscode.window.showInformationMessage(`Uninstalled ${packageId}.`);
       this.refresh();
     } catch (err) {
+      logger.error(`uninstall threw for ${packageId}`, err, {
+        category: 'remove',
+        context: ctx,
+      });
       this.post({
         type: 'host:error',
         message: `Could not uninstall ${packageId}.`,
@@ -867,18 +970,32 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
               };
             })(),
       );
+      const installCtx = { projectPath, packageId, version };
       if (!result.success) {
+        logger.error(`Install failed: ${packageId}${verLabel}`, {
+          category: 'install',
+          context: installCtx,
+          detail: result.output,
+        });
+        this.surfaceUpdateDiagnostics([projectPath], result.output);
         this.post({
           type: 'host:error',
           message: `Could not install ${packageId}.`,
           detail: result.output,
         });
-        logger.show();
         return;
       }
+      logger.info(`Installed ${packageId}${verLabel}`, {
+        category: 'install',
+        context: installCtx,
+      });
       void vscode.window.showInformationMessage(`Installed ${packageId}${verLabel}.`);
       this.refresh();
     } catch (err) {
+      logger.error(`install threw for ${packageId}`, err, {
+        category: 'install',
+        context: { projectPath, packageId, version },
+      });
       this.post({
         type: 'host:error',
         message: `Could not install ${packageId}.`,
