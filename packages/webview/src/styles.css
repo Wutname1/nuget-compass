@@ -2091,9 +2091,25 @@ input[type='checkbox'] {
   color: var(--vscode-editor-background, #1e1e1e);
 }
 
-/* ── Activity tab ─────────────────────────────────────────────────────── */
-
+/* ── Activity tab ──────────────────────────────────────────────────────
+ *
+ * Grid layout for each row, exposed via custom properties so the expanded
+ * detail block can align with the message column without magic numbers.
+ *   --ngc-act-rail   : left severity stripe
+ *   --ngc-act-time   : timestamp column
+ *   --ngc-act-badge  : severity badge (or empty spacer on info rows)
+ *   --ngc-act-cat    : category token
+ *   --ngc-act-gap    : column gap
+ * The detail block's padding-left is computed from these so it stays glued
+ * to the message column regardless of timestamp/badge width changes.
+ */
 .activity-panel {
+  --ngc-act-rail: 2px;
+  --ngc-act-time: 4.5rem;
+  --ngc-act-badge: 3rem;
+  --ngc-act-cat: 4rem;
+  --ngc-act-gap: 0.5rem;
+
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -2114,36 +2130,22 @@ input[type='checkbox'] {
 .activity-filters {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
-.activity-level-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.846rem;
-  cursor: pointer;
-  user-select: none;
-}
-
-.activity-level-chip input {
-  margin: 0;
-}
-
-.activity-level-label {
+/* Severity floor: a tight segmented control matching the existing .seg style. */
+.activity-severity .seg-btn {
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-size: 0.731rem;
-  padding: 0.05rem 0.35rem;
-  border-radius: 3px;
-  border: 1px solid var(--nc-border-soft);
+  letter-spacing: 0.05em;
+  font-size: 0.692rem;
+  padding: 0.15rem 0.45rem;
 }
 
-.activity-level-info  { color: var(--nc-info); }
-.activity-level-warn  { color: var(--nc-warn); }
-.activity-level-error { color: var(--nc-error); }
-.activity-level-debug { color: var(--nc-muted); }
+.activity-severity-debug.seg-btn-active { color: var(--nc-muted); }
+.activity-severity-info.seg-btn-active  { color: var(--nc-info); }
+.activity-severity-warn.seg-btn-active  { color: var(--nc-warn); }
+.activity-severity-error.seg-btn-active { color: var(--nc-error); }
 
 .activity-category-select {
   background: var(--vscode-input-background, transparent);
@@ -2156,23 +2158,48 @@ input[type='checkbox'] {
 
 .activity-actions {
   display: flex;
+  align-items: center;
   gap: 0.4rem;
 }
 
-.activity-list {
+.activity-error-count {
+  font-size: 0.731rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--nc-error);
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--nc-error);
+  border-radius: 999px;
+}
+
+.activity-viewport {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
+}
+
+.activity-list {
+  height: 100%;
   overflow: auto;
-  padding: 0.2rem 0;
+  padding: 0.2rem 0 1.5rem;
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 0.846rem;
 }
 
 .activity-empty {
-  padding: 1rem;
+  padding: 1.25rem 1rem;
+}
+
+.activity-empty-frame {
+  border: 1px dashed var(--nc-border-soft);
+  border-radius: 4px;
+  padding: 0.9rem 1rem;
   color: var(--nc-muted);
   text-align: center;
+  font-family: var(--vscode-font-family);
 }
+
+/* ── Row ───────────────────────────────────────────────────────────── */
 
 .activity-row {
   border-bottom: 1px solid var(--nc-border-soft);
@@ -2180,86 +2207,175 @@ input[type='checkbox'] {
 
 .activity-row-head {
   display: grid;
-  grid-template-columns: auto auto auto auto 1fr auto;
-  align-items: center;
-  gap: 0.5rem;
+  grid-template-columns:
+    var(--ngc-act-rail)
+    var(--ngc-act-time)
+    var(--ngc-act-badge)
+    var(--ngc-act-cat)
+    1fr
+    1.25rem;
+  align-items: baseline;
+  gap: var(--ngc-act-gap);
   width: 100%;
-  padding: 0.25rem 0.6rem;
-  background: transparent;
-  border: 0;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
+  padding: 0.2rem 0.6rem 0.2rem 0;
 }
 
-.activity-row-head:disabled {
-  cursor: default;
-}
-
-.activity-row-head:hover:not(:disabled) {
+.activity-row:hover {
   background: var(--nc-hover-row);
 }
+
+/* Left-edge severity rail — the primary scan-ability cue. */
+.activity-rail {
+  align-self: stretch;
+  background: transparent;
+}
+
+.activity-row-info  .activity-rail { background: var(--nc-info); opacity: 0.35; }
+.activity-row-warn  .activity-rail { background: var(--nc-warn); }
+.activity-row-error .activity-rail { background: var(--nc-error); }
+.activity-row-debug .activity-rail { background: var(--nc-muted); opacity: 0.25; }
 
 .activity-time {
   color: var(--nc-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  font-size: 0.808rem;
 }
 
 .activity-badge {
   font-size: 0.692rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  padding: 0.05rem 0.3rem;
-  border-radius: 3px;
-  border: 1px solid transparent;
-  background: var(--nc-bg-code);
+  letter-spacing: 0.06em;
+  padding: 0.02rem 0.35rem;
+  border-radius: 2px;
   white-space: nowrap;
+  justify-self: start;
+  align-self: center;
+  background: transparent;
 }
 
-.activity-badge-info  { color: var(--nc-info);  border-color: var(--nc-info); }
-.activity-badge-warn  { color: var(--nc-warn);  border-color: var(--nc-warn); }
-.activity-badge-error { color: var(--nc-error); border-color: var(--nc-error); }
+.activity-badge-warn  { color: var(--nc-warn);  border: 1px solid var(--nc-warn); }
+.activity-badge-error { color: var(--nc-error); border: 1px solid var(--nc-error); background: rgba(241, 76, 76, 0.08); }
 .activity-badge-debug { color: var(--nc-muted); }
 
+.activity-badge-spacer,
+.activity-chevron-spacer {
+  display: inline-block;
+}
+
+/* Lowercase, low-contrast category — supporting metadata, not a chip. */
 .activity-category {
   color: var(--nc-muted);
-  text-transform: uppercase;
-  font-size: 0.731rem;
-  letter-spacing: 0.04em;
+  font-size: 0.769rem;
   white-space: nowrap;
+  align-self: center;
+}
+
+.activity-message {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
+  cursor: text;
 }
 
 .activity-context {
   color: var(--nc-accent);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 14rem;
-}
-
-.activity-message {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
+  margin-right: 0.4rem;
 }
 
 .activity-row-error .activity-message {
+  color: var(--vscode-foreground);
+}
+
+.activity-row-error .activity-message::first-line {
   color: var(--nc-error);
 }
 
 .activity-chevron {
   color: var(--nc-muted);
+  background: transparent;
+  border: 0;
+  padding: 0 0.1rem;
+  cursor: pointer;
+  font-size: 0.808rem;
+  align-self: center;
+}
+
+.activity-chevron:hover {
+  color: var(--vscode-foreground);
+}
+
+.activity-row-expandable .activity-message {
+  cursor: text;
 }
 
 .activity-detail {
   margin: 0;
-  padding: 0.4rem 0.8rem 0.6rem 6.5rem;
+  /* Align with the message column: rail + time + badge + cat + 4 gaps + outer 0.6rem. */
+  padding:
+    0.4rem
+    0.8rem
+    0.6rem
+    calc(
+      0.6rem +
+      var(--ngc-act-rail) +
+      var(--ngc-act-time) +
+      var(--ngc-act-badge) +
+      var(--ngc-act-cat) +
+      var(--ngc-act-gap) * 4
+    );
   white-space: pre-wrap;
   word-break: break-word;
   color: var(--nc-muted);
   background: var(--nc-bg-code);
   font-size: 0.808rem;
+  user-select: text;
+}
+
+/* ── Burst separator ──────────────────────────────────────────────── */
+
+.activity-burst-sep {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem 0.35rem
+    calc(0.6rem + var(--ngc-act-rail) + var(--ngc-act-gap));
+  color: var(--nc-muted);
+  font-size: 0.692rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: var(--vscode-font-family);
+}
+
+.activity-burst-sep::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--nc-border-soft);
+}
+
+/* ── Floating "Tail" pill ─────────────────────────────────────────── */
+
+.activity-tail-pill {
+  position: absolute;
+  bottom: 0.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.25rem 0.7rem;
+  font-size: 0.769rem;
+  letter-spacing: 0.04em;
+  background: var(--nc-accent);
+  color: var(--vscode-editor-background, #1e1e1e);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  font-family: var(--vscode-font-family);
+  font-weight: 600;
+}
+
+.activity-tail-pill:hover {
+  filter: brightness(1.1);
 }
