@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "parameters": "",
+  "problems": [
+    {
+      "level": "error",
+      "project": "C:/code/Foo/Foo.csproj",
+      "text": "Unable to load the service index for source https://example.com/nuget/v3/index.json. Response status code does not indicate success: 401 (Unauthorized)."
+    }
+  ]
+}

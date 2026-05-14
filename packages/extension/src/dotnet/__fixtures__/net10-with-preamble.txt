@@ -1,0 +1,22 @@
+Determining projects to restore...
+  Restored C:/code/Foo/Foo.csproj (in 412 ms).
+{
+  "version": 1,
+  "parameters": "",
+  "problems": [
+    { "level": "warning", "text": "(A) : Auto-referenced package." }
+  ],
+  "projects": [
+    {
+      "path": "C:/code/Foo/Foo.csproj",
+      "frameworks": [
+        {
+          "framework": "net10.0",
+          "topLevelPackages": [
+            { "id": "Serilog", "requestedVersion": "4.0.0", "resolvedVersion": "4.0.0" }
+          ]
+        }
+      ]
+    }
+  ]
+}

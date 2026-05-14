@@ -44,6 +44,25 @@ describe('parsePackageListJson', () => {
   it('throws on schema mismatch', () => {
     expect(() => parsePackageListJson('{"foo": 1}')).toThrow(/schema/i);
   });
+
+  it('strips MSBuild preamble before the JSON document (.NET 10 implicit restore)', () => {
+    const data = parsePackageListJson(loadFixture('net10-with-preamble.txt'));
+    expect(data.version).toBe(1);
+    expect(data.projects).toHaveLength(1);
+    expect(data.projects[0]?.frameworks?.[0]?.topLevelPackages?.[0]?.id).toBe('Serilog');
+  });
+
+  it('surfaces .NET 10 problems when restore fails and no projects are present', () => {
+    expect(() => parsePackageListJson(loadFixture('net10-restore-failed.json'))).toThrow(
+      /401|Unauthorized|Unable to load/i,
+    );
+  });
+
+  it('includes a stdout preview in the schema-mismatch message', () => {
+    expect(() => parsePackageListJson('{"version": "1", "projects": []}')).toThrow(
+      /top-level keys: version, projects/i,
+    );
+  });
 });
 
 describe('projectsFromPackageListJson', () => {
