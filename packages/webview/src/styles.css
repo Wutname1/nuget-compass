@@ -233,6 +233,11 @@ code {
   color: var(--nc-error);
 }
 
+.inner-tab .pill.caution {
+  background: rgba(204, 167, 0, 0.18);
+  color: var(--nc-warn);
+}
+
 .inner-tabs-spacer { flex: 1; }
 
 .inner-tabs-cpm {

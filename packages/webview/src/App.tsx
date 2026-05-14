@@ -288,7 +288,10 @@ export function App(): JSX.Element {
               {activityUnread.errors}
             </span>
           ) : activityUnread.warnings > 0 ? (
-            <span className="pill warn" title={`${activityUnread.warnings} new warning(s)`}>
+            <span
+              className="pill caution"
+              title={`${activityUnread.warnings} new warning(s)`}
+            >
               {activityUnread.warnings}
             </span>
           ) : null}
