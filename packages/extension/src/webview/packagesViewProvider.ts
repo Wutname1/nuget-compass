@@ -71,6 +71,14 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   /** True while runRefresh() is in flight — prevents back-to-back scan storms. */
   private scanInFlight = false;
 
+  /**
+   * (projectPath::packageId) entries that the *next* scan is expected to show
+   * a delta for, because we initiated the change. Populated by add/remove
+   * flows; consumed and cleared by the post-scan external-change diff so we
+   * don't double-log "External change" for edits we made ourselves.
+   */
+  private readonly selfMutations = new Set<string>();
+
   constructor(private readonly context: vscode.ExtensionContext) {
     this.catalog = createCatalogClient(context);
     this.vault = new CredentialVault(context.secrets);
@@ -157,12 +165,14 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         extraEnv,
         timeoutMs,
       });
+      const previousProjects = this.lastProjects;
       this.lastProjects = result.projects;
       this.lastRowsByProject.clear();
       logger.info(
         `Scan found ${result.projects.length} project(s); enriching package data…`,
         { category: 'scan' },
       );
+      this.diffExternalChanges(previousProjects, result.projects);
       this.post({ type: 'host:projects', projects: result.projects });
 
       // Surface NuGet sources alongside the project list, decorated with
@@ -516,6 +526,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       { category: 'update', context: ctx },
     );
 
+    this.selfMutations.add(`${projectPath}::${packageId}`);
     this.post({ type: 'host:status', status: 'fetching' });
     try {
       const result = await this.enqueueMutation(() =>
@@ -557,6 +568,96 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     } finally {
       this.post({ type: 'host:status', status: 'idle' });
     }
+  }
+
+  /**
+   * Compare the package set we observed before a scan with what came back.
+   * Any add/remove/version-change that we didn't initiate ourselves
+   * (selfMutations) is logged as an Activity entry so the user can see when
+   * another tool — C# Dev Kit, the editor, a teammate's branch — touched a
+   * project they have open. selfMutations is consumed and cleared here so
+   * future external changes still surface.
+   */
+  private diffExternalChanges(previous: Project[], current: Project[]): void {
+    // Nothing to diff on first scan.
+    if (previous.length === 0) {
+      this.selfMutations.clear();
+      return;
+    }
+
+    const prevByPath = new Map(previous.map((p) => [p.path, p]));
+    const currByPath = new Map(current.map((p) => [p.path, p]));
+
+    // New projects discovered on disk.
+    for (const proj of current) {
+      if (!prevByPath.has(proj.path)) {
+        logger.info(`Discovered new project: ${proj.name}`, {
+          category: 'scan',
+          context: { projectName: proj.name, projectPath: proj.path },
+        });
+      }
+    }
+    // Projects removed from disk.
+    for (const proj of previous) {
+      if (!currByPath.has(proj.path)) {
+        logger.info(`Project removed: ${proj.name}`, {
+          category: 'scan',
+          context: { projectName: proj.name, projectPath: proj.path },
+        });
+      }
+    }
+
+    // Per-project package deltas. Compare top-level packages only — transitive
+    // changes follow from top-level edits and would spam the log.
+    for (const proj of current) {
+      const prev = prevByPath.get(proj.path);
+      if (!prev) continue;
+      const prevTop = new Map(
+        prev.packages.filter((p) => !p.isTransitive).map((p) => [p.id, p]),
+      );
+      const currTop = new Map(
+        proj.packages.filter((p) => !p.isTransitive).map((p) => [p.id, p]),
+      );
+      const ctxBase = { projectName: proj.name, projectPath: proj.path };
+
+      for (const [id, pkg] of currTop) {
+        const before = prevTop.get(id);
+        const selfKey = `${proj.path}::${id}`;
+        const wasMine = this.selfMutations.delete(selfKey);
+        if (!before) {
+          if (wasMine) continue;
+          logger.info(
+            `External change: ${id} ${pkg.resolvedVersion} was added to ${proj.name}.`,
+            {
+              category: 'scan',
+              context: { ...ctxBase, packageId: id, version: pkg.resolvedVersion },
+            },
+          );
+        } else if (before.resolvedVersion !== pkg.resolvedVersion) {
+          if (wasMine) continue;
+          logger.info(
+            `External change: ${id} ${before.resolvedVersion} → ${pkg.resolvedVersion} in ${proj.name}.`,
+            {
+              category: 'scan',
+              context: { ...ctxBase, packageId: id, version: pkg.resolvedVersion },
+            },
+          );
+        }
+      }
+      for (const [id, pkg] of prevTop) {
+        if (currTop.has(id)) continue;
+        const selfKey = `${proj.path}::${id}`;
+        if (this.selfMutations.delete(selfKey)) continue;
+        logger.info(`External change: ${id} ${pkg.resolvedVersion} removed from ${proj.name}.`, {
+          category: 'scan',
+          context: { ...ctxBase, packageId: id, version: pkg.resolvedVersion },
+        });
+      }
+    }
+
+    // Any keys left in selfMutations didn't surface as deltas (the change
+    // failed or got reverted). Drop them — they're no longer pending.
+    this.selfMutations.clear();
   }
 
   /**
@@ -667,6 +768,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
               `Updating ${row.package.id} ${row.package.resolvedVersion} → ${row.newestAllowed!} (${i + 1}/${rows.length})`,
               { category: 'update', context: ctx },
             );
+            this.selfMutations.add(`${projectPath}::${row.package.id}`);
             const result = await this.enqueueMutation(() =>
               addPackage(
                 projectPath,
@@ -755,6 +857,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
 
     const ctx = { projectPath, packageId };
     logger.info(`Uninstalling ${packageId}`, { category: 'remove', context: ctx });
+    this.selfMutations.add(`${projectPath}::${packageId}`);
     this.post({ type: 'host:status', status: 'fetching' });
     try {
       const result = await this.enqueueMutation(() =>
@@ -835,6 +938,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         const outcome = await this.applyPinChain(fix);
         this.post({ type: 'host:fixResult', ...outcome, key });
       } else if (fix.kind === 'remove-package') {
+        this.selfMutations.add(`${fix.projectPath}::${fix.packageId}`);
         const result = await this.enqueueMutation(() =>
           removePackage(fix.projectPath, path.dirname(fix.projectPath), fix.packageId),
         );
@@ -914,6 +1018,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       projects.add(current.projectPath);
       packageIds.add(current.packageId);
 
+      this.selfMutations.add(`${current.projectPath}::${current.packageId}`);
       const result = await this.enqueueMutation(() =>
         addPackage(
           current.projectPath,
@@ -1013,6 +1118,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     );
     if (choice !== 'Install') return;
 
+    this.selfMutations.add(`${projectPath}::${packageId}`);
     this.post({ type: 'host:status', status: 'fetching' });
     try {
       const args: Parameters<typeof addPackage> = [
