@@ -6,21 +6,21 @@ Real .NET projects used during development to validate the extension against the
 
 A `net8.0` console project with 13 packages deliberately pinned to outdated versions spanning multiple categories:
 
-| Category | Package | Pinned | Latest seen |
-|---|---|---|---|
-| Microsoft platform | `Microsoft.EntityFrameworkCore` | 8.0.0 | 10.0.7 (net10-only — TFM trap) |
-| Microsoft platform | `Microsoft.Extensions.Logging` | 8.0.0 | 10.0.7 (multi-target — TFM ok) |
-| Microsoft platform | `Microsoft.Extensions.Configuration` | 8.0.0 | 10.0.7 (multi-target — TFM ok) |
-| Microsoft platform | `Microsoft.Extensions.DependencyInjection` | 8.0.0 | 10.0.7 (multi-target — TFM ok) |
-| Microsoft platform | `System.Text.Json` | 8.0.0 | 10.0.7 (vulnerable; multi-target) |
-| Serialization | `Newtonsoft.Json` | 13.0.1 | 13.0.4 |
-| Logging | `Serilog` | 3.1.1 | 4.3.1 (major bump) |
-| Resilience | `Polly` | 8.2.0 | 8.6.6 |
-| Mapping | `AutoMapper` | 12.0.1 | 16.1.1 (vulnerable; major bump) |
-| Validation | `FluentValidation` | 11.8.0 | 12.1.1 (major bump) |
-| Data | `Dapper` | 2.1.21 | 2.1.72 |
-| Mediator | `MediatR` | 12.2.0 | 14.1.0 (major bump) |
-| Testing | `xunit` | 2.6.0 | 2.9.3 |
+| Category           | Package                                    | Pinned | Latest seen                       |
+| ------------------ | ------------------------------------------ | ------ | --------------------------------- |
+| Microsoft platform | `Microsoft.EntityFrameworkCore`            | 8.0.0  | 10.0.7 (net10-only — TFM trap)    |
+| Microsoft platform | `Microsoft.Extensions.Logging`             | 8.0.0  | 10.0.7 (multi-target — TFM ok)    |
+| Microsoft platform | `Microsoft.Extensions.Configuration`       | 8.0.0  | 10.0.7 (multi-target — TFM ok)    |
+| Microsoft platform | `Microsoft.Extensions.DependencyInjection` | 8.0.0  | 10.0.7 (multi-target — TFM ok)    |
+| Microsoft platform | `System.Text.Json`                         | 8.0.0  | 10.0.7 (vulnerable; multi-target) |
+| Serialization      | `Newtonsoft.Json`                          | 13.0.1 | 13.0.4                            |
+| Logging            | `Serilog`                                  | 3.1.1  | 4.3.1 (major bump)                |
+| Resilience         | `Polly`                                    | 8.2.0  | 8.6.6                             |
+| Mapping            | `AutoMapper`                               | 12.0.1 | 16.1.1 (vulnerable; major bump)   |
+| Validation         | `FluentValidation`                         | 11.8.0 | 12.1.1 (major bump)               |
+| Data               | `Dapper`                                   | 2.1.21 | 2.1.72                            |
+| Mediator           | `MediatR`                                  | 12.2.0 | 14.1.0 (major bump)               |
+| Testing            | `xunit`                                    | 2.6.0  | 2.9.3                             |
 
 ### Why these were chosen
 
@@ -54,7 +54,7 @@ dotnet package list --vulnerable --format json
 
 ### Maintenance
 
-- Do **not** run `dotnet outdated` and accept fixes here. The point of this fixture is that packages are *out of date.*
+- Do **not** run `dotnet outdated` and accept fixes here. The point of this fixture is that packages are _out of date._
 - If new .NET versions release and these packages no longer demonstrate the TFM trap, update the matrix above and re-pin to whatever versions reproduce the same scenarios.
 - The `bin/` and `obj/` directories are in `.gitignore`; restore is on-demand.
 
