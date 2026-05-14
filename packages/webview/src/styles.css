@@ -2117,7 +2117,7 @@ input[type='checkbox'] {
 
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1 1 auto;
   min-height: 0;
 }
 
@@ -2165,6 +2165,20 @@ input[type='checkbox'] {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+}
+
+.activity-autoscroll {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.808rem;
+  color: var(--nc-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.activity-autoscroll input {
+  margin: 0;
 }
 
 .activity-error-count {

@@ -71,24 +71,35 @@ export function ActivityPanel({
     [entries, filters],
   );
 
-  // Auto-scroll to newest unless the user has scrolled up.
+  // Auto-scroll preference. The checkbox is the source of truth; the user can
+  // also pause auto-scroll by scrolling up (we flip the checkbox off so the
+  // state stays coherent).
   const listRef = useRef<HTMLDivElement | null>(null);
-  const [stickToBottom, setStickToBottom] = useState(true);
+  const [autoScroll, setAutoScroll] = useState(true);
+  // Suppress the scroll-handler flip during programmatic scroll-to-bottom.
+  const programmaticScroll = useRef(false);
+
   useEffect(() => {
-    if (!stickToBottom) return;
+    if (!autoScroll) return;
     const el = listRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [visible.length, stickToBottom]);
+    if (!el) return;
+    programmaticScroll.current = true;
+    el.scrollTop = el.scrollHeight;
+    requestAnimationFrame(() => {
+      programmaticScroll.current = false;
+    });
+  }, [visible.length, autoScroll]);
 
   function onScroll(): void {
+    if (programmaticScroll.current) return;
     const el = listRef.current;
     if (!el) return;
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
-    setStickToBottom(atBottom);
+    if (!atBottom && autoScroll) setAutoScroll(false);
   }
 
   function jumpToTail(): void {
-    setStickToBottom(true);
+    setAutoScroll(true);
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }
@@ -143,6 +154,24 @@ export function ActivityPanel({
               {errorCount} error{errorCount === 1 ? '' : 's'}
             </span>
           ) : null}
+          <label
+            className="activity-autoscroll"
+            title="Keep the view pinned to the newest entry"
+          >
+            <input
+              type="checkbox"
+              checked={autoScroll}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setAutoScroll(next);
+                if (next) {
+                  const el = listRef.current;
+                  if (el) el.scrollTop = el.scrollHeight;
+                }
+              }}
+            />
+            <span>Auto-scroll</span>
+          </label>
           <button
             type="button"
             className="btn-secondary"
@@ -195,7 +224,7 @@ export function ActivityPanel({
             })
           )}
         </div>
-        {!stickToBottom && visible.length > 0 ? (
+        {!autoScroll && visible.length > 0 ? (
           <button
             type="button"
             className="activity-tail-pill"

@@ -460,6 +460,22 @@ export function App(): JSX.Element {
 
       <div className="app-body">
         <main className="app-main">
+          {state.tab === 'activity' ? (
+            <ActivityPanel
+              entries={state.activity}
+              filters={state.activityFilters}
+              onSetLevel={(level, enabled) =>
+                dispatch({ type: 'setActivityLevel', level, enabled })
+              }
+              onSetCategory={(category) =>
+                dispatch({ type: 'setActivityCategory', category })
+              }
+              onClear={() => vscode.postMessage({ type: 'view:clearActivity' })}
+              onRevealOutputChannel={() =>
+                vscode.postMessage({ type: 'view:revealOutputChannel' })
+              }
+            />
+          ) : (
           <div className="scroll-area">
             {state.tab === 'installed' ? (
               <InstalledList
@@ -496,23 +512,8 @@ export function App(): JSX.Element {
                 onBulkUpdate={handleBulkUpdateRequest}
               />
             ) : null}
-            {state.tab === 'activity' ? (
-              <ActivityPanel
-                entries={state.activity}
-                filters={state.activityFilters}
-                onSetLevel={(level, enabled) =>
-                  dispatch({ type: 'setActivityLevel', level, enabled })
-                }
-                onSetCategory={(category) =>
-                  dispatch({ type: 'setActivityCategory', category })
-                }
-                onClear={() => vscode.postMessage({ type: 'view:clearActivity' })}
-                onRevealOutputChannel={() =>
-                  vscode.postMessage({ type: 'view:revealOutputChannel' })
-                }
-              />
-            ) : null}
           </div>
+          )}
           <SourcesPanel sources={state.sources} />
         </main>
         {state.tab !== 'activity' ? (
