@@ -455,6 +455,7 @@ export function App(): JSX.Element {
         status={state.status}
         error={state.error}
         onOpenActivity={() => setTab('activity')}
+        cachedRowsVisible={state.projects.length > 0}
       />
 
       <DiagnosticsPanel

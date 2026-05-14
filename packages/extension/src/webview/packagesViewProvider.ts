@@ -35,6 +35,18 @@ import {
 } from '../dotnet/sources.js';
 import { CredentialVault } from '../dotnet/credentialVault.js';
 
+/**
+ * Persisted view of the last enriched scan. Replayed on the next session's
+ * first paint so the user sees update arrows instantly.
+ */
+interface EnrichmentSnapshot {
+  version: 1;
+  savedAt: number;
+  projects: Project[];
+  rowsByProject: Record<string, PackageRow[]>;
+  diagnostics: NuDiagnostic[];
+}
+
 export class PackagesViewProvider implements vscode.WebviewViewProvider {
   static readonly viewType = 'nuget-compass.packages';
 
@@ -65,6 +77,10 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
 
   /** Workspace-state key for the user's "don't show this code again" list. */
   private static readonly suppressedCodesKey = 'nuget-compass.suppressedDiagnosticCodes';
+  /** Workspace-state key for the last enrichment snapshot (per-workspace cache). */
+  private static readonly enrichmentCacheKey = 'nuget-compass.enrichmentCache.v1';
+  /** Discard cached enrichment older than this — versions move on. */
+  private static readonly enrichmentMaxAgeMs = 14 * 24 * 60 * 60 * 1000;
 
   /** Disposer for the logger subscription that streams entries to the webview. */
   private activitySub: { unsubscribe: () => void } | undefined;
@@ -234,6 +250,9 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       await Promise.all(
         result.projects.map((project) => this.enrichProject(project, filters)),
       );
+      // Persist the freshly enriched view so the next session can paint it
+      // instantly while a new scan warms up in the background.
+      void this.saveEnrichmentSnapshot();
     } catch (err) {
       if (err instanceof DotnetNotFoundError) {
         this.post({ type: 'host:error', message: err.message });
@@ -407,7 +426,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   private handleViewMessage(msg: ViewMessage): void {
     logger.trace(`view → host: ${msg.type}`);
     switch (msg.type) {
-      case 'view:ready':
+      case 'view:ready': {
         this.post({
           type: 'host:init',
           filters: this.loadFilters(),
@@ -417,8 +436,18 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         if (this.lastBulkProgress) {
           this.post({ type: 'host:bulkProgress', state: this.lastBulkProgress });
         }
+        // Replay any cached enriched view so the panel shows update arrows
+        // immediately. The live scan still runs and overwrites stale rows
+        // as fresh data lands. Only replay on the *first* view:ready of the
+        // session — subsequent reloads (e.g. webview discard/reload) already
+        // have the in-memory state.
+        if (this.lastProjects.length === 0) {
+          const snap = this.loadEnrichmentSnapshot();
+          if (snap) this.replayCachedEnrichment(snap);
+        }
         this.refresh();
         return;
+      }
       case 'view:refresh':
         if (msg.forceCacheBust) void this.forceRefresh();
         else this.refresh();
@@ -945,6 +974,66 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
 
   private suppressedCodes(): string[] {
     return this.context.workspaceState.get<string[]>(PackagesViewProvider.suppressedCodesKey, []);
+  }
+
+  /**
+   * Persist the most recent enriched view so the next session can paint
+   * immediately while the live scan runs in the background. We store the
+   * projects array, the enriched rows-by-project, and the diagnostics. The
+   * cache is keyed per-workspace (workspaceState, not globalState) so a
+   * different folder's stale results never leak in. Stamped with a timestamp;
+   * snapshots older than enrichmentMaxAgeMs are discarded on load.
+   */
+  private async saveEnrichmentSnapshot(): Promise<void> {
+    const snapshot: EnrichmentSnapshot = {
+      version: 1,
+      savedAt: Date.now(),
+      projects: this.lastProjects,
+      rowsByProject: Object.fromEntries(this.lastRowsByProject.entries()),
+      diagnostics: this.lastDiagnostics,
+    };
+    await this.context.workspaceState.update(
+      PackagesViewProvider.enrichmentCacheKey,
+      snapshot,
+    );
+  }
+
+  private loadEnrichmentSnapshot(): EnrichmentSnapshot | undefined {
+    const raw = this.context.workspaceState.get<EnrichmentSnapshot>(
+      PackagesViewProvider.enrichmentCacheKey,
+    );
+    if (raw?.version !== 1) return undefined;
+    if (Date.now() - raw.savedAt > PackagesViewProvider.enrichmentMaxAgeMs) return undefined;
+    return raw;
+  }
+
+  /**
+   * Push the cached enrichment to the webview as the first paint so the user
+   * sees update arrows the instant the panel opens, while the live scan runs
+   * in the background. The fresh scan will overwrite each project's rows as
+   * enrichment completes.
+   */
+  private replayCachedEnrichment(snapshot: EnrichmentSnapshot): void {
+    this.lastProjects = snapshot.projects;
+    this.lastRowsByProject.clear();
+    for (const [projectPath, rows] of Object.entries(snapshot.rowsByProject)) {
+      this.lastRowsByProject.set(projectPath, rows);
+    }
+    this.lastDiagnostics = snapshot.diagnostics;
+    this.post({ type: 'host:projects', projects: snapshot.projects });
+    for (const [projectPath, rows] of Object.entries(snapshot.rowsByProject)) {
+      this.post({ type: 'host:packageRows', projectPath, rows });
+    }
+    this.post({
+      type: 'host:diagnostics',
+      diagnostics: snapshot.diagnostics,
+      suppressedCodes: this.suppressedCodes(),
+    });
+    const ageMins = Math.round((Date.now() - snapshot.savedAt) / 60000);
+    logger.info(
+      `Loaded cached view (${snapshot.projects.length} project(s), ${ageMins}m old). Checking for new updates…`,
+      { category: 'scan' },
+    );
   }
 
   private async setSuppressed(code: string, suppressed: boolean): Promise<void> {

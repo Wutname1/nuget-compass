@@ -2,12 +2,20 @@ interface StatusBannerProps {
   status: 'idle' | 'scanning' | 'fetching';
   error?: { message: string; detail?: string };
   onOpenActivity?: () => void;
+  /**
+   * True when cached project rows are already on screen and the active scan
+   * is just refreshing them. Changes the banner copy from "Scanning…" to
+   * "Checking for updates…" so the user understands they are looking at
+   * cached data, not waiting for the first paint.
+   */
+  cachedRowsVisible?: boolean;
 }
 
 export function StatusBanner({
   status,
   error,
   onOpenActivity,
+  cachedRowsVisible,
 }: StatusBannerProps): JSX.Element | null {
   if (error) {
     // Strip our own "Open the Activity tab for details." trailer if present so
@@ -48,19 +56,16 @@ export function StatusBanner({
       </div>
     );
   }
-  if (status === 'scanning') {
+  if (status === 'scanning' || status === 'fetching') {
+    const label = cachedRowsVisible
+      ? 'Checking for new updates…'
+      : status === 'scanning'
+        ? 'Scanning .NET projects…'
+        : 'Fetching versions…';
     return (
       <div className="banner banner-info" role="status">
         <span className="banner-spinner" aria-hidden="true" />
-        <span>Scanning .NET projects&hellip;</span>
-      </div>
-    );
-  }
-  if (status === 'fetching') {
-    return (
-      <div className="banner banner-info" role="status">
-        <span className="banner-spinner" aria-hidden="true" />
-        <span>Fetching versions&hellip;</span>
+        <span>{label}</span>
       </div>
     );
   }
