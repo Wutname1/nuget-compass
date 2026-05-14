@@ -68,6 +68,9 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   /** Disposer for the logger subscription that streams entries to the webview. */
   private activitySub: { unsubscribe: () => void } | undefined;
 
+  /** True while runRefresh() is in flight — prevents back-to-back scan storms. */
+  private scanInFlight = false;
+
   constructor(private readonly context: vscode.ExtensionContext) {
     this.catalog = createCatalogClient(context);
     this.vault = new CredentialVault(context.secrets);
@@ -89,7 +92,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   }
 
   refresh(): void {
-    if (this.pendingMutations > 0) {
+    if (this.pendingMutations > 0 || this.scanInFlight) {
       this.refreshPending = true;
       return;
     }
@@ -131,6 +134,11 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async runRefresh(): Promise<void> {
+    if (this.scanInFlight) {
+      this.refreshPending = true;
+      return;
+    }
+    this.scanInFlight = true;
     this.post({ type: 'host:status', status: 'scanning' });
     logger.info('Scanning workspace for .NET projects…', { category: 'scan' });
     const filters = this.loadFilters();
@@ -215,6 +223,12 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       }
     } finally {
       this.post({ type: 'host:status', status: 'idle' });
+      this.scanInFlight = false;
+      // If something requested another scan while we were running, drain it now.
+      if (this.refreshPending && this.pendingMutations === 0) {
+        this.refreshPending = false;
+        void this.runRefresh();
+      }
     }
   }
 
@@ -525,6 +539,8 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         category: 'update',
         context: ctx,
       });
+      // Parse warnings out of the success output too (NU1903, etc.).
+      this.surfaceUpdateDiagnostics([projectPath], result.output);
       // Refresh is deferred until every queued mutation drains, so a bulk
       // update produces one workspace scan rather than N racing scans.
       this.refresh();
@@ -554,6 +570,23 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       fresh.push(...parseDiagnosticsFromOutput(p, output));
     }
     if (fresh.length === 0) return;
+    // Log each fresh diagnostic so the user sees the NuGet error in our
+    // Activity log instead of (or before) C# Dev Kit's popup.
+    for (const d of fresh) {
+      const ctx = {
+        projectPath: d.projectPath,
+        packageId: d.packageId,
+        version: d.fromVersion ?? d.toVersion,
+      };
+      const message = `${d.code}: ${firstLine(d.message)}`;
+      if (d.level === 'error') {
+        logger.error(message, { category: 'diagnostic', context: ctx, detail: d.message });
+      } else if (d.level === 'warning') {
+        logger.warn(message, { category: 'diagnostic', context: ctx, detail: d.message });
+      } else {
+        logger.info(message, { category: 'diagnostic', context: ctx, detail: d.message });
+      }
+    }
     const merged = dedupeDiagnostics([...this.lastDiagnostics, ...fresh]);
     this.lastDiagnostics = merged;
     this.post({
@@ -636,13 +669,16 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
                 `Update failed: ${row.package.id} → ${row.newestAllowed!}`,
                 { category: 'update', context: ctx, detail: result.output },
               );
-              this.surfaceUpdateDiagnostics([projectPath], result.output);
             } else {
               logger.info(
                 `Updated ${row.package.id} → ${row.newestAllowed!}`,
                 { category: 'update', context: ctx },
               );
             }
+            // Even on success, parse for warnings (NU1903 vulnerabilities, etc.)
+            // so we surface them in our UI instead of letting C# Dev Kit's
+            // popup be the user's only signal.
+            this.surfaceUpdateDiagnostics([projectPath], result.output);
           }
         },
       );
