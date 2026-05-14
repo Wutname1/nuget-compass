@@ -66,7 +66,11 @@ code {
 .app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  /* Pin to exactly the viewport so the header can't scroll off-screen when
+     a child surface (like the Activity log) grows long. The .app-body flex
+     child is the only thing that should be able to grow + scroll internally. */
+  height: 100vh;
+  overflow: hidden;
   container-type: inline-size;
 }
 
