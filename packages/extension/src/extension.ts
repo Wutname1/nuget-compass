@@ -23,6 +23,12 @@ export function activate(context: vscode.ExtensionContext): void {
     refreshTimer = setTimeout(() => {
       const triggers = Array.from(pendingTriggers);
       pendingTriggers.clear();
+      // Skip the "External change detected" entry while we're mid-bulk-update:
+      // every dotnet add we run writes the .csproj and that would otherwise
+      // log a fake external-change for every iteration. The bulk run schedules
+      // its own refresh when it finishes, so dropping the log + skipping the
+      // refresh here is safe.
+      if (provider.isBulkRunActive()) return;
       logger.info(
         `External change detected (${triggers.length} file${triggers.length === 1 ? '' : 's'}): ${triggers.slice(0, 5).join(', ')}${triggers.length > 5 ? `, …and ${triggers.length - 5} more` : ''}. Re-scanning.`,
         { category: 'scan' },

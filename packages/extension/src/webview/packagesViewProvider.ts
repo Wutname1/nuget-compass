@@ -139,11 +139,21 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   }
 
   refresh(): void {
-    if (this.pendingMutations > 0 || this.scanInFlight) {
+    // A bulk run mutates each .csproj in sequence and our file watcher fires
+    // on every write. Refreshing in the middle would scan the workspace
+    // repeatedly while the run is still going. The run itself calls refresh()
+    // at the end, so we just defer.
+    if (this.activeBulk || this.pendingMutations > 0 || this.scanInFlight) {
       this.refreshPending = true;
       return;
     }
     void this.runRefresh();
+  }
+
+  /** True while a bulk run is active. Used by the watcher to suppress noisy
+   *  "external change" log entries we caused ourselves. */
+  isBulkRunActive(): boolean {
+    return Boolean(this.activeBulk);
   }
 
   /**
@@ -662,6 +672,10 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
    * future external changes still surface.
    */
   private diffExternalChanges(previous: Project[], current: Project[]): void {
+    // While a bulk run is mid-flight we are mid-mutation; consuming
+    // selfMutations now would drop keys for packages we haven't gotten to yet,
+    // and they'd then look like external changes on the post-bulk scan. Skip.
+    if (this.activeBulk) return;
     // Nothing to diff on first scan.
     if (previous.length === 0) {
       this.selfMutations.clear();
