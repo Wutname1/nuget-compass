@@ -1,4 +1,7 @@
 import type {
+  ActivityCategory,
+  ActivityEntry,
+  ActivityLevel,
   Diagnostic,
   FilterState,
   HostMessage,
@@ -35,7 +38,12 @@ export interface SelectedPackage {
 }
 
 /** Top-level tab in the panel. */
-export type AppTab = 'installed' | 'browse' | 'updates';
+export type AppTab = 'installed' | 'browse' | 'updates' | 'activity';
+
+export interface ActivityFilters {
+  levels: Record<ActivityLevel, boolean>;
+  category: ActivityCategory | 'all';
+}
 
 /** How the Installed list is grouped. */
 export type GroupBy = 'package' | 'project';
@@ -98,7 +106,17 @@ export interface AppState {
       manualIntervention?: { reason: string; projects: string[]; packageIds: string[] };
     }
   >;
+  /** Streamed activity entries (capped client-side at 500). */
+  activity: ActivityEntry[];
+  activityFilters: ActivityFilters;
 }
+
+const ACTIVITY_CAP = 500;
+
+const defaultActivityFilters: ActivityFilters = {
+  levels: { info: true, warn: true, error: true, debug: false },
+  category: 'all',
+};
 
 export const initialState: AppState = {
   filters: defaultFilterState,
@@ -117,6 +135,8 @@ export const initialState: AppState = {
   suppressedCodes: [],
   fixesInFlight: {},
   fixResults: {},
+  activity: [],
+  activityFilters: defaultActivityFilters,
 };
 
 export function readmeKey(packageId: string, version: string): string {
@@ -138,7 +158,9 @@ export type Action =
   | { type: 'dismissToast' }
   | { type: 'dismissAuthPrompt' }
   | { type: 'fixStarted'; key: string }
-  | { type: 'dismissFixResult'; key: string };
+  | { type: 'dismissFixResult'; key: string }
+  | { type: 'setActivityLevel'; level: ActivityLevel; enabled: boolean }
+  | { type: 'setActivityCategory'; category: ActivityCategory | 'all' };
 
 export function packageKey(projectPath: string, packageId: string): string {
   return `${projectPath}::${packageId}`;
@@ -186,6 +208,19 @@ export function reducer(state: AppState, action: Action): AppState {
       delete next[action.key];
       return { ...state, fixResults: next };
     }
+    case 'setActivityLevel':
+      return {
+        ...state,
+        activityFilters: {
+          ...state.activityFilters,
+          levels: { ...state.activityFilters.levels, [action.level]: action.enabled },
+        },
+      };
+    case 'setActivityCategory':
+      return {
+        ...state,
+        activityFilters: { ...state.activityFilters, category: action.category },
+      };
     case 'host':
       return applyHostMessage(state, action.message);
   }
@@ -275,10 +310,12 @@ function applyHostMessage(state: AppState, msg: HostMessage): AppState {
         // banner doesn't keep yelling about errors that no longer exist.
         error: msg.diagnostics.length === 0 ? undefined : state.error,
       };
-    case 'host:activity':
+    case 'host:activity': {
+      const merged = msg.replace ? msg.entries : appendActivity(state.activity, msg.entries);
+      return { ...state, activity: merged };
+    }
     case 'host:activityCleared':
-      // Handled in a later commit; ignore here so the switch stays exhaustive.
-      return state;
+      return { ...state, activity: [] };
     case 'host:fixResult': {
       const inFlight = { ...state.fixesInFlight };
       delete inFlight[msg.key];
@@ -296,6 +333,22 @@ function applyHostMessage(state: AppState, msg: HostMessage): AppState {
       };
     }
   }
+}
+
+function appendActivity(
+  existing: ActivityEntry[],
+  incoming: ActivityEntry[],
+): ActivityEntry[] {
+  if (incoming.length === 0) return existing;
+  const seen = new Set(existing.map((e) => e.id));
+  const merged = existing.slice();
+  for (const e of incoming) {
+    if (seen.has(e.id)) continue;
+    seen.add(e.id);
+    merged.push(e);
+  }
+  if (merged.length > ACTIVITY_CAP) merged.splice(0, merged.length - ACTIVITY_CAP);
+  return merged;
 }
 
 function updateRowNewest(

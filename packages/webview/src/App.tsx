@@ -7,6 +7,7 @@ import { aggregatePackages, type AggregatedPackage } from './state/aggregate.js'
 import { InstalledList } from './components/InstalledList.js';
 import { BrowsePanel } from './components/BrowsePanel.js';
 import { UpdatesPanel } from './components/UpdatesPanel.js';
+import { ActivityPanel } from './components/ActivityPanel.js';
 import {
   DetailPanel,
   type DetailSelection,
@@ -261,6 +262,15 @@ export function App(): JSX.Element {
           Updates
           {updateCount > 0 ? <span className="pill">{updateCount}</span> : null}
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={state.tab === 'activity'}
+          className={'inner-tab' + (state.tab === 'activity' ? ' inner-tab-active' : '')}
+          onClick={() => setTab('activity')}
+        >
+          Activity
+        </button>
         <span className="inner-tabs-spacer" />
         {hasCpm ? (
           <span
@@ -273,6 +283,7 @@ export function App(): JSX.Element {
         ) : null}
       </div>
 
+      {state.tab !== 'activity' ? (
       <div className="filter-bar">
         <span className="search-box">
           <span className="search-box-icon">
@@ -384,6 +395,7 @@ export function App(): JSX.Element {
           </button>
         ) : null}
       </div>
+      ) : null}
 
       <StatusBanner status={state.status} error={state.error} />
 
@@ -455,9 +467,26 @@ export function App(): JSX.Element {
                 onBulkUpdate={handleBulkUpdateRequest}
               />
             ) : null}
+            {state.tab === 'activity' ? (
+              <ActivityPanel
+                entries={state.activity}
+                filters={state.activityFilters}
+                onSetLevel={(level, enabled) =>
+                  dispatch({ type: 'setActivityLevel', level, enabled })
+                }
+                onSetCategory={(category) =>
+                  dispatch({ type: 'setActivityCategory', category })
+                }
+                onClear={() => vscode.postMessage({ type: 'view:clearActivity' })}
+                onRevealOutputChannel={() =>
+                  vscode.postMessage({ type: 'view:revealOutputChannel' })
+                }
+              />
+            ) : null}
           </div>
           <SourcesPanel sources={state.sources} />
         </main>
+        {state.tab !== 'activity' ? (
         <aside className="app-detail">
           <DetailPanel
             selection={detailSelection}
@@ -473,6 +502,7 @@ export function App(): JSX.Element {
             onUpdateConfirm={handleUpdateRequest}
           />
         </aside>
+        ) : null}
       </div>
 
       <ConfirmUpdateModal

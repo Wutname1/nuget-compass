@@ -2079,3 +2079,176 @@ input[type='checkbox'] {
   background: var(--vscode-editorWarning-foreground, #cca700);
   color: var(--vscode-editor-background, #1e1e1e);
 }
+
+/* ── Activity tab ─────────────────────────────────────────────────────── */
+
+.activity-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.activity-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--nc-border-soft);
+  background: var(--nc-bg-section);
+  flex-wrap: wrap;
+}
+
+.activity-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.activity-level-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.846rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.activity-level-chip input {
+  margin: 0;
+}
+
+.activity-level-label {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.731rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 3px;
+  border: 1px solid var(--nc-border-soft);
+}
+
+.activity-level-info  { color: var(--nc-info); }
+.activity-level-warn  { color: var(--nc-warn); }
+.activity-level-error { color: var(--nc-error); }
+.activity-level-debug { color: var(--nc-muted); }
+
+.activity-category-select {
+  background: var(--vscode-input-background, transparent);
+  color: inherit;
+  border: 1px solid var(--nc-border);
+  border-radius: 3px;
+  padding: 0.15rem 0.3rem;
+  font-size: 0.846rem;
+}
+
+.activity-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.activity-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.2rem 0;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.846rem;
+}
+
+.activity-empty {
+  padding: 1rem;
+  color: var(--nc-muted);
+  text-align: center;
+}
+
+.activity-row {
+  border-bottom: 1px solid var(--nc-border-soft);
+}
+
+.activity-row-head {
+  display: grid;
+  grid-template-columns: auto auto auto auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.25rem 0.6rem;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.activity-row-head:disabled {
+  cursor: default;
+}
+
+.activity-row-head:hover:not(:disabled) {
+  background: var(--nc-hover-row);
+}
+
+.activity-time {
+  color: var(--nc-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.activity-badge {
+  font-size: 0.692rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  background: var(--nc-bg-code);
+  white-space: nowrap;
+}
+
+.activity-badge-info  { color: var(--nc-info);  border-color: var(--nc-info); }
+.activity-badge-warn  { color: var(--nc-warn);  border-color: var(--nc-warn); }
+.activity-badge-error { color: var(--nc-error); border-color: var(--nc-error); }
+.activity-badge-debug { color: var(--nc-muted); }
+
+.activity-category {
+  color: var(--nc-muted);
+  text-transform: uppercase;
+  font-size: 0.731rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.activity-context {
+  color: var(--nc-accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 14rem;
+}
+
+.activity-message {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.activity-row-error .activity-message {
+  color: var(--nc-error);
+}
+
+.activity-chevron {
+  color: var(--nc-muted);
+}
+
+.activity-detail {
+  margin: 0;
+  padding: 0.4rem 0.8rem 0.6rem 6.5rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--nc-muted);
+  background: var(--nc-bg-code);
+  font-size: 0.808rem;
+}
