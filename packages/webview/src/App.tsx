@@ -16,6 +16,10 @@ import { StatusBanner } from './components/StatusBanner.js';
 import { SourcesPanel } from './components/SourcesPanel.js';
 import { Toast } from './components/Toast.js';
 import { ConfirmUpdateModal } from './components/ConfirmUpdateModal.js';
+import {
+  ConfirmBulkUpdateModal,
+  type BulkUpdateItem,
+} from './components/ConfirmBulkUpdateModal.js';
 import { AddSourceModal } from './components/AddSourceModal.js';
 import {
   CompassIcon,
@@ -35,6 +39,7 @@ export function App(): JSX.Element {
   });
   const [refreshing, setRefreshing] = useState(false);
   const [pendingUpdate, setPendingUpdate] = useState<UpdateRequest | undefined>();
+  const [pendingBulkUpdate, setPendingBulkUpdate] = useState<BulkUpdateItem[] | undefined>();
   const [selectedHit, setSelectedHit] = useState<SearchHit | undefined>();
 
   useEffect(() => {
@@ -117,6 +122,7 @@ export function App(): JSX.Element {
         projectPath,
         packageId: pendingUpdate.packageId,
         toVersion: pendingUpdate.toVersion,
+        confirmed: true,
       });
     }
     dispatch({
@@ -130,6 +136,39 @@ export function App(): JSX.Element {
       },
     });
     setPendingUpdate(undefined);
+  }
+
+  function handleBulkUpdateRequest(items: BulkUpdateItem[]): void {
+    if (items.length === 0) return;
+    setPendingBulkUpdate(items);
+  }
+
+  function confirmBulkUpdate(): void {
+    if (!pendingBulkUpdate) return;
+    let projectCount = 0;
+    for (const item of pendingBulkUpdate) {
+      for (const projectPath of item.projectPaths) {
+        projectCount += 1;
+        vscode.postMessage({
+          type: 'view:updatePackage',
+          projectPath,
+          packageId: item.packageId,
+          toVersion: item.toVersion,
+          confirmed: true,
+        });
+      }
+    }
+    dispatch({
+      type: 'showToast',
+      toast: {
+        id: nextToastId++,
+        kind: 'success',
+        message: `Updating ${pendingBulkUpdate.length} ${
+          pendingBulkUpdate.length === 1 ? 'package' : 'packages'
+        } across ${projectCount} ${projectCount === 1 ? 'project' : 'projects'}.`,
+      },
+    });
+    setPendingBulkUpdate(undefined);
   }
 
   // Counts for the inner-tab pills.
@@ -382,6 +421,7 @@ export function App(): JSX.Element {
                 filterQuery={state.filterQuery}
                 selectedPackage={state.selectedPackage}
                 onSelect={selectPackage}
+                onBulkUpdate={handleBulkUpdateRequest}
               />
             ) : null}
           </div>
@@ -409,6 +449,13 @@ export function App(): JSX.Element {
         projectNames={projectNames}
         onCancel={() => setPendingUpdate(undefined)}
         onConfirm={confirmUpdate}
+      />
+
+      <ConfirmBulkUpdateModal
+        items={pendingBulkUpdate}
+        projectNames={projectNames}
+        onCancel={() => setPendingBulkUpdate(undefined)}
+        onConfirm={confirmBulkUpdate}
       />
 
       {state.authPrompt ? (

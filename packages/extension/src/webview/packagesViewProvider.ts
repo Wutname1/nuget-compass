@@ -327,7 +327,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         void this.expandPackage(msg.projectPath, msg.packageId);
         return;
       case 'view:updatePackage':
-        void this.updatePackage(msg.projectPath, msg.packageId, msg.toVersion);
+        void this.updatePackage(msg.projectPath, msg.packageId, msg.toVersion, msg.confirmed);
         return;
       case 'view:updateAll':
         void this.updateAll(msg.projectPath);
@@ -373,6 +373,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     projectPath: string,
     packageId: string,
     toVersion: string,
+    confirmed?: boolean,
   ): Promise<void> {
     const project = this.lastProjects.find((p) => p.path === projectPath);
     if (!project) {
@@ -385,16 +386,18 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    const promptDetail = pkg.isTransitive
-      ? `${packageId} is currently a transitive dependency at ${pkg.resolvedVersion}. ` +
-        `Installing ${toVersion} adds it as a top-level <PackageReference>, pinning it across restores. Continue?`
-      : `Update ${packageId} from ${pkg.resolvedVersion} to ${toVersion}?`;
-    const choice = await vscode.window.showInformationMessage(
-      promptDetail,
-      { modal: true },
-      pkg.isTransitive ? 'Pin' : 'Update',
-    );
-    if (choice !== 'Update' && choice !== 'Pin') return;
+    if (!confirmed) {
+      const promptDetail = pkg.isTransitive
+        ? `${packageId} is currently a transitive dependency at ${pkg.resolvedVersion}. ` +
+          `Installing ${toVersion} adds it as a top-level <PackageReference>, pinning it across restores. Continue?`
+        : `Update ${packageId} from ${pkg.resolvedVersion} to ${toVersion}?`;
+      const choice = await vscode.window.showInformationMessage(
+        promptDetail,
+        { modal: true },
+        pkg.isTransitive ? 'Pin' : 'Update',
+      );
+      if (choice !== 'Update' && choice !== 'Pin') return;
+    }
 
     this.post({ type: 'host:status', status: 'fetching' });
     try {

@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react';
 import type { PackageRow, Project } from '@nuget-compass/shared';
 import { aggregatePackages, type AggregatedPackage } from '../state/aggregate.js';
 import type { SelectedPackage } from '../state/reducer.js';
-import { vscode } from '../vscode.js';
 import { GenericEmpty } from './EmptyState.js';
+import type { BulkUpdateItem } from './ConfirmBulkUpdateModal.js';
 
 interface UpdatesPanelProps {
   projects: Project[];
@@ -11,6 +11,7 @@ interface UpdatesPanelProps {
   filterQuery: string;
   selectedPackage: SelectedPackage | undefined;
   onSelect: (pkg: AggregatedPackage) => void;
+  onBulkUpdate: (items: BulkUpdateItem[]) => void;
 }
 
 /**
@@ -24,6 +25,7 @@ export function UpdatesPanel({
   filterQuery,
   selectedPackage,
   onSelect,
+  onBulkUpdate,
 }: UpdatesPanelProps): JSX.Element {
   const updatable = useMemo(() => {
     const pkgs = aggregatePackages(rowsByProject, projects, false);
@@ -56,21 +58,31 @@ export function UpdatesPanel({
   }
 
   function applySelected(): void {
+    const items: BulkUpdateItem[] = [];
     for (const pkg of filtered) {
       if (!checked.has(pkg.id)) continue;
       const target = pkg.latestNewer;
       if (!target) continue;
+      const projectPaths: string[] = [];
+      const fromVersions = new Set<string>();
+      let hasTransitive = false;
       for (const inst of pkg.installs) {
         if (inst.newestAllowed && inst.newestAllowed !== inst.resolvedVersion) {
-          vscode.postMessage({
-            type: 'view:updatePackage',
-            projectPath: inst.projectPath,
-            packageId: pkg.id,
-            toVersion: target,
-          });
+          projectPaths.push(inst.projectPath);
+          fromVersions.add(inst.resolvedVersion);
+          if (inst.isTransitive) hasTransitive = true;
         }
       }
+      if (projectPaths.length === 0) continue;
+      items.push({
+        packageId: pkg.id,
+        toVersion: target,
+        fromVersions: Array.from(fromVersions),
+        projectPaths,
+        hasTransitive,
+      });
     }
+    if (items.length > 0) onBulkUpdate(items);
   }
 
   if (updatable.length === 0) {

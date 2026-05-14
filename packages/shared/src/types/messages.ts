@@ -148,6 +148,12 @@ export interface ViewUpdatePackageMessage {
   projectPath: string;
   packageId: string;
   toVersion: string;
+  /**
+   * When true, the host skips its native confirmation modal because the
+   * webview already confirmed with the user. Used for bulk update flows
+   * to avoid one prompt per package/project.
+   */
+  confirmed?: boolean;
 }
 
 export interface ViewUpdateAllMessage {
