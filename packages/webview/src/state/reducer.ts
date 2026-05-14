@@ -275,6 +275,10 @@ function applyHostMessage(state: AppState, msg: HostMessage): AppState {
         // banner doesn't keep yelling about errors that no longer exist.
         error: msg.diagnostics.length === 0 ? undefined : state.error,
       };
+    case 'host:activity':
+    case 'host:activityCleared':
+      // Handled in a later commit; ignore here so the switch stays exhaustive.
+      return state;
     case 'host:fixResult': {
       const inFlight = { ...state.fixesInFlight };
       delete inFlight[msg.key];

@@ -65,6 +65,9 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   /** Workspace-state key for the user's "don't show this code again" list. */
   private static readonly suppressedCodesKey = 'nuget-compass.suppressedDiagnosticCodes';
 
+  /** Disposer for the logger subscription that streams entries to the webview. */
+  private activitySub: { unsubscribe: () => void } | undefined;
+
   constructor(private readonly context: vscode.ExtensionContext) {
     this.catalog = createCatalogClient(context);
     this.vault = new CredentialVault(context.secrets);
@@ -370,6 +373,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
           filters: this.loadFilters(),
           fontScale: this.loadFontScale(),
         });
+        this.subscribeActivity();
         this.refresh();
         return;
       case 'view:refresh':
@@ -433,7 +437,23 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         // exists for parity (e.g. NU1701 "Show in list" fix) so future
         // versions can scroll/focus the row from the host if needed.
         return;
+      case 'view:clearActivity':
+        logger.clear();
+        this.post({ type: 'host:activityCleared' });
+        return;
+      case 'view:revealOutputChannel':
+        logger.show();
+        return;
     }
+  }
+
+  private subscribeActivity(): void {
+    this.activitySub?.unsubscribe();
+    const sub = logger.subscribe((entry) => {
+      this.post({ type: 'host:activity', entries: [entry], replace: false });
+    });
+    this.activitySub = sub;
+    this.post({ type: 'host:activity', entries: sub.entries, replace: true });
   }
 
   private async updatePackage(

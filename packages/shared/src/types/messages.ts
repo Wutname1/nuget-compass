@@ -158,6 +158,52 @@ export interface HostReadmeMessage {
   errorMessage?: string;
 }
 
+// ── Activity log ────────────────────────────────────────────────────────────
+
+export type ActivityLevel = 'info' | 'warn' | 'error' | 'debug';
+
+export type ActivityCategory =
+  | 'scan'
+  | 'update'
+  | 'install'
+  | 'remove'
+  | 'restore'
+  | 'diagnostic'
+  | 'source'
+  | 'general';
+
+export interface ActivityEntry {
+  /** Monotonic id from the host, used for keying and de-dup. */
+  id: number;
+  /** Epoch ms. */
+  timestamp: number;
+  level: ActivityLevel;
+  category: ActivityCategory;
+  message: string;
+  /** Expandable body (stack trace, dotnet output, NU-code detail). */
+  detail?: string;
+  context?: {
+    projectName?: string;
+    projectPath?: string;
+    packageId?: string;
+    version?: string;
+  };
+}
+
+/**
+ * Activity batch. On initial subscribe `replace` is true and `entries` is the
+ * full ring buffer; subsequent messages are deltas (`replace` false).
+ */
+export interface HostActivityMessage {
+  type: 'host:activity';
+  entries: ActivityEntry[];
+  replace: boolean;
+}
+
+export interface HostActivityClearedMessage {
+  type: 'host:activityCleared';
+}
+
 export type HostMessage =
   | HostInitMessage
   | HostFontScaleMessage
@@ -172,7 +218,9 @@ export type HostMessage =
   | HostErrorMessage
   | HostStatusMessage
   | HostDiagnosticsMessage
-  | HostFixResultMessage;
+  | HostFixResultMessage
+  | HostActivityMessage
+  | HostActivityClearedMessage;
 
 // ── Webview → Host ──────────────────────────────────────────────────────────
 
@@ -292,6 +340,14 @@ export interface ViewRevealPackageMessage {
   packageId: string;
 }
 
+export interface ViewClearActivityMessage {
+  type: 'view:clearActivity';
+}
+
+export interface ViewRevealOutputChannelMessage {
+  type: 'view:revealOutputChannel';
+}
+
 export type ViewMessage =
   | ViewReadyMessage
   | ViewRefreshMessage
@@ -309,4 +365,6 @@ export type ViewMessage =
   | ViewOpenSettingsMessage
   | ViewApplyDiagnosticFixMessage
   | ViewSuppressDiagnosticCodeMessage
-  | ViewRevealPackageMessage;
+  | ViewRevealPackageMessage
+  | ViewClearActivityMessage
+  | ViewRevealOutputChannelMessage;
