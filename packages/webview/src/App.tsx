@@ -175,6 +175,19 @@ export function App(): JSX.Element {
 
   // Counts for the inner-tab pills.
   const updateCount = useMemo(() => aggregated.filter((p) => p.hasUpdate).length, [aggregated]);
+
+  // Unread activity (errors/warnings) since the user last visited the tab.
+  const activityUnread = useMemo(() => {
+    if (state.tab === 'activity') return { errors: 0, warnings: 0 };
+    let errors = 0;
+    let warnings = 0;
+    for (const e of state.activity) {
+      if (e.id <= state.activityLastSeenId) continue;
+      if (e.level === 'error') errors++;
+      else if (e.level === 'warn') warnings++;
+    }
+    return { errors, warnings };
+  }, [state.activity, state.activityLastSeenId, state.tab]);
   const vulnCount = useMemo(
     () => aggregated.filter((p) => p.hasVulnerability).length,
     [aggregated],
@@ -270,6 +283,15 @@ export function App(): JSX.Element {
           onClick={() => setTab('activity')}
         >
           Activity
+          {activityUnread.errors > 0 ? (
+            <span className="pill pill-error" title={`${activityUnread.errors} new error(s)`}>
+              {activityUnread.errors}
+            </span>
+          ) : activityUnread.warnings > 0 ? (
+            <span className="pill warn" title={`${activityUnread.warnings} new warning(s)`}>
+              {activityUnread.warnings}
+            </span>
+          ) : null}
         </button>
         <span className="inner-tabs-spacer" />
         {hasCpm ? (
@@ -397,7 +419,11 @@ export function App(): JSX.Element {
       </div>
       ) : null}
 
-      <StatusBanner status={state.status} error={state.error} />
+      <StatusBanner
+        status={state.status}
+        error={state.error}
+        onOpenActivity={() => setTab('activity')}
+      />
 
       <DiagnosticsPanel
         diagnostics={state.diagnostics}

@@ -109,6 +109,8 @@ export interface AppState {
   /** Streamed activity entries (capped client-side at 500). */
   activity: ActivityEntry[];
   activityFilters: ActivityFilters;
+  /** Highest activity id seen while the Activity tab was active. */
+  activityLastSeenId: number;
 }
 
 const ACTIVITY_CAP = 500;
@@ -137,6 +139,7 @@ export const initialState: AppState = {
   fixResults: {},
   activity: [],
   activityFilters: defaultActivityFilters,
+  activityLastSeenId: 0,
 };
 
 export function readmeKey(packageId: string, version: string): string {
@@ -186,8 +189,14 @@ export function reducer(state: AppState, action: Action): AppState {
           [readmeKey(action.packageId, action.version)]: { loading: true },
         },
       };
-    case 'setTab':
-      return { ...state, tab: action.tab };
+    case 'setTab': {
+      const next: AppState = { ...state, tab: action.tab };
+      if (action.tab === 'activity') {
+        const last = state.activity[state.activity.length - 1];
+        next.activityLastSeenId = last ? last.id : state.activityLastSeenId;
+      }
+      return next;
+    }
     case 'setGroupBy':
       return { ...state, groupBy: action.groupBy };
     case 'setFilterQuery':
@@ -312,10 +321,18 @@ function applyHostMessage(state: AppState, msg: HostMessage): AppState {
       };
     case 'host:activity': {
       const merged = msg.replace ? msg.entries : appendActivity(state.activity, msg.entries);
-      return { ...state, activity: merged };
+      // If the user is currently on the Activity tab, treat new entries as seen
+      // so the unread badge doesn't flash for entries they're already watching.
+      const last = merged[merged.length - 1];
+      const lastSeen =
+        state.tab === 'activity' && last ? last.id : state.activityLastSeenId;
+      // Replace messages (initial snapshot) shouldn't make a fresh user see every
+      // historical entry as new — mark everything as already-seen.
+      const initialSeen = msg.replace && last ? last.id : lastSeen;
+      return { ...state, activity: merged, activityLastSeenId: initialSeen };
     }
     case 'host:activityCleared':
-      return { ...state, activity: [] };
+      return { ...state, activity: [], activityLastSeenId: 0 };
     case 'host:fixResult': {
       const inFlight = { ...state.fixesInFlight };
       delete inFlight[msg.key];

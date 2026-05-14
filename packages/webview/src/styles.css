@@ -841,6 +841,17 @@ input[type='checkbox'] {
   margin-top: 1px;
 }
 
+.banner-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.banner-action {
+  margin-left: auto;
+  flex-shrink: 0;
+  align-self: center;
+}
+
 .banner-link {
   color: var(--nc-link);
   text-decoration: underline;
