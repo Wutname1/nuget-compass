@@ -1896,3 +1896,186 @@ input[type='checkbox'] {
   background: var(--vscode-errorForeground, #f48771);
   color: var(--vscode-editor-background, #1e1e1e);
 }
+
+/* ── Diagnostics panel ──────────────────────────────────────────────────── */
+
+.diagnostics-panel {
+  margin: 0 0 6px;
+  border: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
+  border-radius: 4px;
+  background: var(--vscode-editorWidget-background, rgba(255, 255, 255, 0.02));
+}
+
+.diagnostics-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.08));
+}
+
+.diagnostics-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.923rem;
+  padding: 0;
+}
+
+.diagnostics-toggle .pill {
+  margin-left: 4px;
+}
+
+.diagnostics-caret {
+  display: inline-block;
+  width: 10px;
+  text-align: center;
+}
+
+.diagnostics-suppressed-note {
+  margin-left: auto;
+  font-size: 0.808rem;
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.diagnostics-body {
+  padding: 4px 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.diagnostic-group {
+  padding: 6px 8px;
+  border-radius: 3px;
+  background: var(--vscode-editor-background, rgba(0, 0, 0, 0.2));
+  border-left: 3px solid transparent;
+}
+
+.diagnostic-group-error {
+  border-left-color: var(--vscode-errorForeground, #f48771);
+}
+
+.diagnostic-group-warning {
+  border-left-color: var(--vscode-editorWarning-foreground, #cca700);
+}
+
+.diagnostic-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.diagnostic-badge {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.769rem;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: var(--vscode-badge-background, #3a3d41);
+  color: var(--vscode-badge-foreground, #cccccc);
+}
+
+.diagnostic-badge-error {
+  background: var(--vscode-errorForeground, #f48771);
+  color: var(--vscode-editor-background, #1e1e1e);
+}
+
+.diagnostic-badge-warning {
+  background: var(--vscode-editorWarning-foreground, #cca700);
+  color: var(--vscode-editor-background, #1e1e1e);
+}
+
+.diagnostic-count {
+  font-size: 0.808rem;
+  opacity: 0.7;
+}
+
+.diagnostic-blurb,
+.diagnostic-fix-hint {
+  margin: 4px 0;
+  font-size: 0.846rem;
+  line-height: 1.4;
+  opacity: 0.85;
+}
+
+.diagnostic-fix-hint {
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.diagnostic-items {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.diagnostic-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.846rem;
+}
+
+.diagnostic-item-target {
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.diagnostic-item-project {
+  opacity: 0.6;
+  font-size: 0.808rem;
+}
+
+.diagnostic-fix-button {
+  padding: 1px 8px;
+  font-size: 0.808rem;
+}
+
+.diagnostic-link {
+  font-size: 0.808rem;
+  color: var(--vscode-textLink-foreground);
+}
+
+.diagnostic-result {
+  margin-top: 4px;
+  padding: 4px 6px;
+  font-size: 0.846rem;
+  border-radius: 2px;
+}
+
+.diagnostic-result-ok {
+  background: rgba(70, 180, 70, 0.12);
+  color: var(--vscode-foreground);
+}
+
+.diagnostic-result-bad {
+  background: rgba(220, 80, 80, 0.12);
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.diagnostic-manual {
+  margin-top: 4px;
+}
+
+.diagnostic-manual summary {
+  cursor: pointer;
+}
+
+.pill-error {
+  background: var(--vscode-errorForeground, #f48771);
+  color: var(--vscode-editor-background, #1e1e1e);
+}
+
+.pill-warn {
+  background: var(--vscode-editorWarning-foreground, #cca700);
+  color: var(--vscode-editor-background, #1e1e1e);
+}

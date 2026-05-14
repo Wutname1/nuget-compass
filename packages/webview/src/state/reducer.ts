@@ -1,4 +1,10 @@
-import type { FilterState, HostMessage, PackageRow, Project } from '@nuget-compass/shared';
+import type {
+  Diagnostic,
+  FilterState,
+  HostMessage,
+  PackageRow,
+  Project,
+} from '@nuget-compass/shared';
 import { defaultFilterState } from '@nuget-compass/shared';
 
 export interface ProjectStatus {
@@ -77,6 +83,21 @@ export interface AppState {
   filterQuery: string;
   /** Most recent toast (auto-dismissed by the App). */
   toast?: Toast;
+  /** Structured NuGet diagnostics from the most recent scan. */
+  diagnostics: Diagnostic[];
+  /** NU-codes the user has chosen to suppress in this workspace. */
+  suppressedCodes: string[];
+  /** Fix keys currently being applied (host:fixResult clears them). */
+  fixesInFlight: Record<string, true>;
+  /** Last fix result keyed by diagnostic key — used to show inline feedback. */
+  fixResults: Record<
+    string,
+    {
+      success: boolean;
+      message: string;
+      manualIntervention?: { reason: string; projects: string[]; packageIds: string[] };
+    }
+  >;
 }
 
 export const initialState: AppState = {
@@ -92,6 +113,10 @@ export const initialState: AppState = {
   tab: 'installed',
   groupBy: 'package',
   filterQuery: '',
+  diagnostics: [],
+  suppressedCodes: [],
+  fixesInFlight: {},
+  fixResults: {},
 };
 
 export function readmeKey(packageId: string, version: string): string {
@@ -111,7 +136,9 @@ export type Action =
   | { type: 'setFilterQuery'; query: string }
   | { type: 'showToast'; toast: Toast }
   | { type: 'dismissToast' }
-  | { type: 'dismissAuthPrompt' };
+  | { type: 'dismissAuthPrompt' }
+  | { type: 'fixStarted'; key: string }
+  | { type: 'dismissFixResult'; key: string };
 
 export function packageKey(projectPath: string, packageId: string): string {
   return `${projectPath}::${packageId}`;
@@ -149,6 +176,16 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, toast: undefined };
     case 'dismissAuthPrompt':
       return { ...state, authPrompt: undefined };
+    case 'fixStarted':
+      return {
+        ...state,
+        fixesInFlight: { ...state.fixesInFlight, [action.key]: true },
+      };
+    case 'dismissFixResult': {
+      const next = { ...state.fixResults };
+      delete next[action.key];
+      return { ...state, fixResults: next };
+    }
     case 'host':
       return applyHostMessage(state, action.message);
   }
@@ -226,6 +263,34 @@ function applyHostMessage(state: AppState, msg: HostMessage): AppState {
       return { ...state, status: msg.status };
     case 'host:error':
       return { ...state, error: { message: msg.message, detail: msg.detail } };
+    case 'host:diagnostics':
+      return {
+        ...state,
+        diagnostics: msg.diagnostics,
+        suppressedCodes: msg.suppressedCodes,
+        // Fresh scan invalidates stale fix results from the previous scan.
+        fixResults: {},
+        fixesInFlight: {},
+        // A clean diagnostics list also clears any legacy error blob so the
+        // banner doesn't keep yelling about errors that no longer exist.
+        error: msg.diagnostics.length === 0 ? undefined : state.error,
+      };
+    case 'host:fixResult': {
+      const inFlight = { ...state.fixesInFlight };
+      delete inFlight[msg.key];
+      return {
+        ...state,
+        fixesInFlight: inFlight,
+        fixResults: {
+          ...state.fixResults,
+          [msg.key]: {
+            success: msg.success,
+            message: msg.message,
+            manualIntervention: msg.manualIntervention,
+          },
+        },
+      };
+    }
   }
 }
 

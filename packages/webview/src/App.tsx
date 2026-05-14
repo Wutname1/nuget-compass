@@ -13,6 +13,7 @@ import {
   type UpdateRequest,
 } from './components/DetailPanel.js';
 import { StatusBanner } from './components/StatusBanner.js';
+import { DiagnosticsPanel } from './components/DiagnosticsPanel.js';
 import { SourcesPanel } from './components/SourcesPanel.js';
 import { Toast } from './components/Toast.js';
 import { ConfirmUpdateModal } from './components/ConfirmUpdateModal.js';
@@ -385,6 +386,36 @@ export function App(): JSX.Element {
       </div>
 
       <StatusBanner status={state.status} error={state.error} />
+
+      <DiagnosticsPanel
+        diagnostics={state.diagnostics}
+        suppressedCodes={state.suppressedCodes}
+        fixesInFlight={state.fixesInFlight}
+        fixResults={state.fixResults}
+        onApplyFix={(key, fix) => {
+          dispatch({ type: 'fixStarted', key });
+          vscode.postMessage({ type: 'view:applyDiagnosticFix', key, fix });
+          if (fix.kind === 'update-package' || fix.kind === 'reveal-package') {
+            // Jump the user to the package in the Installed list so they can
+            // pick a version themselves. The host echoes a host:fixResult so
+            // the panel still shows feedback.
+            dispatch({ type: 'setTab', tab: 'installed' });
+            const first = state.projects.find((p) =>
+              p.packages.some((pkg) => pkg.id === fix.packageId),
+            );
+            if (first) {
+              dispatch({
+                type: 'selectPackage',
+                selection: { projectPath: first.path, packageId: fix.packageId },
+              });
+            }
+          }
+        }}
+        onSuppressCode={(code, suppressed) =>
+          vscode.postMessage({ type: 'view:suppressDiagnosticCode', code, suppressed })
+        }
+        onDismissFixResult={(key) => dispatch({ type: 'dismissFixResult', key })}
+      />
 
       <div className="app-body">
         <main className="app-main">

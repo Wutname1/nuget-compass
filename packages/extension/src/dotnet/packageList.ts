@@ -93,7 +93,13 @@ export async function listPackagesWithOutput(
       `dotnet package list exited ${result.code} with no output. stderr:\n${result.stderr}`,
     );
   }
-  return { data: parsePackageListJson(result.stdout), output: `${result.stdout}\n${result.stderr}` };
+  // Lenient parse: a problems-only payload (restore failed in .NET 10) still
+  // returns successfully so the caller can surface structured diagnostics
+  // instead of a single opaque error string.
+  return {
+    data: parsePackageListJson(result.stdout, { lenient: true }),
+    output: `${result.stdout}\n${result.stderr}`,
+  };
 }
 
 function buildListArgs(projectOrSolutionPath: string, options: ListPackagesOptions): string[] {
@@ -119,8 +125,16 @@ function buildListArgs(projectOrSolutionPath: string, options: ListPackagesOptio
 
 /**
  * Parse the JSON. Exposed for direct use against captured fixtures in tests.
+ *
+ * In strict mode (the default) a problems-only payload throws so callers in
+ * legacy code paths still see an error. Lenient mode returns the parsed
+ * object as-is so callers can extract structured diagnostics from
+ * `data.problems` themselves.
  */
-export function parsePackageListJson(raw: string): DotnetPackageListJson {
+export function parsePackageListJson(
+  raw: string,
+  options: { lenient?: boolean } = {},
+): DotnetPackageListJson {
   const trimmed = raw.trim();
   if (trimmed.length === 0) {
     throw new Error('dotnet package list returned empty output');
@@ -151,9 +165,15 @@ export function parsePackageListJson(raw: string): DotnetPackageListJson {
     );
   }
   // When restore fails in .NET 10, the JSON has `problems` but no `projects`.
-  // Surface the problems as a real error instead of returning a silent empty
-  // result so the user sees what went wrong.
-  if (parsed.projects.length === 0 && parsed.problems && parsed.problems.length > 0) {
+  // Strict mode surfaces the problems as a real error so legacy callers see
+  // them. Lenient mode returns the parsed result and lets the caller render
+  // structured diagnostics from `problems[]`.
+  if (
+    !options.lenient &&
+    parsed.projects.length === 0 &&
+    parsed.problems &&
+    parsed.problems.length > 0
+  ) {
     const problemText = formatProblems(parsed);
     throw new Error(`dotnet package list could not produce results: ${problemText}`);
   }

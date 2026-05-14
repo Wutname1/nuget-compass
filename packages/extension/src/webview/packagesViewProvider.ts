@@ -18,6 +18,12 @@ import { scanVulnerabilities, type VulnerabilitiesByPackage } from '../dotnet/vu
 import { scanDeprecations, type DeprecationsByPackage } from '../dotnet/deprecated.js';
 import { addPackage } from '../dotnet/addPackage.js';
 import { removePackage } from '../dotnet/removePackage.js';
+import {
+  parseDiagnosticsFromOutput,
+  dedupeDiagnostics,
+  type NuDiagnostic,
+  type NuFix,
+} from '../dotnet/diagnostics.js';
 import { searchPackages } from '../dotnet/searchPackages.js';
 import { listSources } from '../dotnet/listSources.js';
 import {
@@ -53,6 +59,11 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   private pendingMutations = 0;
   /** Set when a refresh was requested while mutations were in flight. */
   private refreshPending = false;
+  /** Most recent diagnostics emitted to the view; reused when suppression toggles. */
+  private lastDiagnostics: NuDiagnostic[] = [];
+
+  /** Workspace-state key for the user's "don't show this code again" list. */
+  private static readonly suppressedCodesKey = 'nuget-compass.suppressedDiagnosticCodes';
 
   constructor(private readonly context: vscode.ExtensionContext) {
     this.catalog = createCatalogClient(context);
@@ -159,6 +170,18 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         });
       }
 
+      // Structured diagnostics replace the legacy single-blob error banner.
+      // We only fall back to host:error for catastrophic scan failures (e.g.
+      // dotnet missing) below in the catch block.
+      this.lastDiagnostics = result.diagnostics;
+      this.post({
+        type: 'host:diagnostics',
+        diagnostics: result.diagnostics,
+        suppressedCodes: this.suppressedCodes(),
+      });
+
+      // Per-project hard failures (e.g. timeout) still surface as a one-line
+      // error banner so the user knows the scan is incomplete.
       if (result.errors.length > 0) {
         const detail = result.errors.map((e) => `${e.projectPath}: ${e.message}`).join('\n');
         this.post({
@@ -399,6 +422,17 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
           '@ext:wutname1.nuget-compass',
         );
         return;
+      case 'view:applyDiagnosticFix':
+        void this.applyDiagnosticFix(msg.key, msg.fix);
+        return;
+      case 'view:suppressDiagnosticCode':
+        void this.setSuppressed(msg.code, msg.suppressed);
+        return;
+      case 'view:revealPackage':
+        // No-op on the host side; the webview owns selection. The message
+        // exists for parity (e.g. NU1701 "Show in list" fix) so future
+        // versions can scroll/focus the row from the host if needed.
+        return;
     }
   }
 
@@ -563,6 +597,190 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     } finally {
       this.post({ type: 'host:status', status: 'idle' });
     }
+  }
+
+  private suppressedCodes(): string[] {
+    return this.context.workspaceState.get<string[]>(PackagesViewProvider.suppressedCodesKey, []);
+  }
+
+  private async setSuppressed(code: string, suppressed: boolean): Promise<void> {
+    const current = new Set(this.suppressedCodes());
+    if (suppressed) current.add(code);
+    else current.delete(code);
+    await this.context.workspaceState.update(
+      PackagesViewProvider.suppressedCodesKey,
+      Array.from(current),
+    );
+    // Re-publish so the webview applies the new suppression list immediately.
+    this.post({
+      type: 'host:diagnostics',
+      diagnostics: this.lastDiagnostics,
+      suppressedCodes: Array.from(current),
+    });
+  }
+
+  /**
+   * Apply a diagnostic fix. NU1605 cascades — pinning A may surface a fresh
+   * NU1605 against B. We follow that chain up to a small bound and detect
+   * cycles, falling back to a "manual intervention" message when the SDK
+   * keeps disagreeing with itself.
+   */
+  private async applyDiagnosticFix(key: string, fix: NuFix): Promise<void> {
+    if (fix.kind === 'reveal-package') {
+      // Pure UI hint; nothing to do on the host.
+      this.post({
+        type: 'host:fixResult',
+        key,
+        success: true,
+        message: `Located ${fix.packageId}.`,
+      });
+      return;
+    }
+
+    this.post({ type: 'host:status', status: 'fetching' });
+    try {
+      if (fix.kind === 'pin-package') {
+        const outcome = await this.applyPinChain(fix);
+        this.post({ type: 'host:fixResult', ...outcome, key });
+      } else if (fix.kind === 'remove-package') {
+        const result = await this.enqueueMutation(() =>
+          removePackage(fix.projectPath, path.dirname(fix.projectPath), fix.packageId),
+        );
+        if (!result.success) {
+          this.post({
+            type: 'host:fixResult',
+            key,
+            success: false,
+            message: `Could not remove ${fix.packageId}: ${firstLine(result.output)}`,
+          });
+          logger.show();
+          return;
+        }
+        this.post({
+          type: 'host:fixResult',
+          key,
+          success: true,
+          message: `Removed ${fix.packageId}.`,
+        });
+      } else if (fix.kind === 'update-package') {
+        // Vulnerable/deprecated: jump the user to the package in-list so they
+        // pick a safe version. We don't auto-pick because the right floor
+        // depends on the advisory.
+        this.post({
+          type: 'host:fixResult',
+          key,
+          success: true,
+          message: `Open ${fix.packageId} to select a fixed version.`,
+        });
+      }
+    } catch (err) {
+      logger.error('applyDiagnosticFix failed', err);
+      this.post({
+        type: 'host:fixResult',
+        key,
+        success: false,
+        message: describeReason(err),
+      });
+    } finally {
+      this.post({ type: 'host:status', status: 'idle' });
+      this.refresh();
+    }
+  }
+
+  /**
+   * Pin a package to a version, then follow any new NU1605 downgrades that
+   * pop out of the SDK's output. Bounded to keep us from spinning on a
+   * pathological project, and cycle-detects the A↔B case.
+   */
+  private async applyPinChain(initial: {
+    projectPath: string;
+    packageId: string;
+    version: string;
+  }): Promise<{ success: boolean; message: string; manualIntervention?: { reason: string; projects: string[]; packageIds: string[] } }> {
+    const MAX_STEPS = 6;
+    const visited = new Set<string>();
+    const projects = new Set<string>();
+    const packageIds = new Set<string>();
+    let current = initial;
+
+    for (let step = 0; step < MAX_STEPS; step++) {
+      const visitKey = `${current.projectPath}::${current.packageId}`;
+      if (visited.has(visitKey)) {
+        return {
+          success: false,
+          message:
+            `Pin chain looped on ${current.packageId} in ${path.basename(current.projectPath)}. ` +
+            `Edit the .csproj file directly and run "dotnet restore".`,
+          manualIntervention: {
+            reason: 'Circular package downgrade detected.',
+            projects: Array.from(projects),
+            packageIds: Array.from(packageIds),
+          },
+        };
+      }
+      visited.add(visitKey);
+      projects.add(current.projectPath);
+      packageIds.add(current.packageId);
+
+      const result = await this.enqueueMutation(() =>
+        addPackage(
+          current.projectPath,
+          path.dirname(current.projectPath),
+          current.packageId,
+          current.version,
+        ),
+      );
+
+      if (result.success) {
+        if (step === 0) {
+          return { success: true, message: `Pinned ${current.packageId} to ${current.version}.` };
+        }
+        return {
+          success: true,
+          message:
+            `Resolved by pinning ${packageIds.size} package(s) across ${projects.size} project(s).`,
+        };
+      }
+
+      // The add failed. Parse its output for the next NU1605, if any.
+      const followUps = dedupeDiagnostics(
+        parseDiagnosticsFromOutput(current.projectPath, result.output),
+      ).filter(
+        (d) =>
+          d.code === 'NU1605' &&
+          d.fix?.kind === 'pin-package' &&
+          d.packageId &&
+          d.fix.version,
+      );
+
+      const next = followUps[0]?.fix;
+      if (next?.kind !== 'pin-package') {
+        // Not a downgrade conflict — surface the SDK error verbatim.
+        logger.error(`pin chain stopped: ${result.output}`);
+        logger.show();
+        return {
+          success: false,
+          message:
+            `Could not pin ${current.packageId} to ${current.version}: ${firstLine(result.output)}`,
+        };
+      }
+      current = {
+        projectPath: next.projectPath,
+        packageId: next.packageId,
+        version: next.version,
+      };
+    }
+
+    return {
+      success: false,
+      message:
+        `Gave up after ${MAX_STEPS} dependency-chain pins. The .csproj files likely need manual edits.`,
+      manualIntervention: {
+        reason: 'Pin chain exceeded maximum depth.',
+        projects: Array.from(projects),
+        packageIds: Array.from(packageIds),
+      },
+    };
   }
 
   private async runSearch(query: string): Promise<void> {

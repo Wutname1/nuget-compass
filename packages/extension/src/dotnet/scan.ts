@@ -3,6 +3,12 @@ import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import type { Project } from '@nuget-compass/shared';
 import { listPackagesWithOutput, projectsFromPackageListJson } from './packageList.js';
+import {
+  parseDiagnosticsFromOutput,
+  parseDiagnosticsFromProblems,
+  dedupeDiagnostics,
+  type NuDiagnostic,
+} from './diagnostics.js';
 import { logger } from '../logging/logger.js';
 
 export interface ScanResult {
@@ -10,6 +16,8 @@ export interface ScanResult {
   errors: ScanError[];
   /** Combined per-project stdout/stderr from `dotnet package list`. Used to sniff auth failures. */
   rawOutputs: string[];
+  /** Deduped, structured NuGet diagnostics distilled from the scan. */
+  diagnostics: NuDiagnostic[];
 }
 
 export interface ScanError {
@@ -34,19 +42,26 @@ export async function scanWorkspace(
 ): Promise<ScanResult> {
   const folders = vscode.workspace.workspaceFolders;
   if (!folders || folders.length === 0) {
-    return { projects: [], errors: [], rawOutputs: [] };
+    return { projects: [], errors: [], rawOutputs: [], diagnostics: [] };
   }
 
   const projectFiles = await findProjectFiles();
   if (projectFiles.length === 0) {
-    return { projects: [], errors: [], rawOutputs: [] };
+    return { projects: [], errors: [], rawOutputs: [], diagnostics: [] };
   }
 
   logger.info(`scanWorkspace: found ${projectFiles.length} project file(s)`);
 
   const results = await Promise.all(
     projectFiles.map(
-      async (uri): Promise<{ projects: Project[]; error?: ScanError; output: string }> => {
+      async (
+        uri,
+      ): Promise<{
+        projects: Project[];
+        error?: ScanError;
+        output: string;
+        diagnostics: NuDiagnostic[];
+      }> => {
         try {
           const cwd = path.dirname(uri.fsPath);
           const { data, output } = await listPackagesWithOutput(uri.fsPath, cwd, {
@@ -57,11 +72,20 @@ export async function scanWorkspace(
           const projects = projectsFromPackageListJson(data, options);
           // Decorate with CPM and lock-file detection (filesystem walks).
           await Promise.all(projects.map(decorateProjectMetadata));
-          return { projects, output };
+          const diagnostics = [
+            ...parseDiagnosticsFromProblems(uri.fsPath, data.problems),
+            ...parseDiagnosticsFromOutput(uri.fsPath, output),
+          ];
+          return { projects, output, diagnostics };
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           logger.warn(`scan failed for ${uri.fsPath}: ${message}`);
-          return { projects: [], error: { projectPath: uri.fsPath, message }, output: message };
+          return {
+            projects: [],
+            error: { projectPath: uri.fsPath, message },
+            output: message,
+            diagnostics: parseDiagnosticsFromOutput(uri.fsPath, message),
+          };
         }
       },
     ),
@@ -70,16 +94,19 @@ export async function scanWorkspace(
   const projects: Project[] = [];
   const errors: ScanError[] = [];
   const rawOutputs: string[] = [];
+  const rawDiagnostics: NuDiagnostic[] = [];
   for (const r of results) {
     projects.push(...r.projects);
     if (r.error) errors.push(r.error);
     rawOutputs.push(r.output);
+    rawDiagnostics.push(...r.diagnostics);
   }
 
   // Deterministic ordering: by file basename then full path.
   projects.sort((a, b) => a.name.localeCompare(b.name) || a.path.localeCompare(b.path));
 
-  return { projects, errors, rawOutputs };
+  const diagnostics = dedupeDiagnostics(rawDiagnostics);
+  return { projects, errors, rawOutputs, diagnostics };
 }
 
 async function findProjectFiles(): Promise<vscode.Uri[]> {

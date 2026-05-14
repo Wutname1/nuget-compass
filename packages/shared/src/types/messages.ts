@@ -46,6 +46,57 @@ export interface HostStatusMessage {
   status: 'idle' | 'scanning' | 'fetching';
 }
 
+// ── Diagnostics ─────────────────────────────────────────────────────────────
+
+export type DiagnosticLevel = 'error' | 'warning' | 'info';
+
+export type DiagnosticFix =
+  | {
+      kind: 'pin-package';
+      projectPath: string;
+      packageId: string;
+      version: string;
+      reason: string;
+    }
+  | { kind: 'remove-package'; projectPath: string; packageId: string; reason: string }
+  | { kind: 'update-package'; projectPath: string; packageId: string; reason: string }
+  | { kind: 'reveal-package'; projectPath: string; packageId: string };
+
+export interface Diagnostic {
+  key: string;
+  code: string;
+  level: DiagnosticLevel;
+  projectPath: string;
+  packageId?: string;
+  fromVersion?: string;
+  toVersion?: string;
+  targetFramework?: string;
+  url?: string;
+  severity?: string;
+  message: string;
+  fix?: DiagnosticFix;
+}
+
+export interface HostDiagnosticsMessage {
+  type: 'host:diagnostics';
+  diagnostics: Diagnostic[];
+  /** Codes the user has suppressed; webview hides matching diagnostics. */
+  suppressedCodes: string[];
+}
+
+export interface HostFixResultMessage {
+  type: 'host:fixResult';
+  key: string;
+  success: boolean;
+  message: string;
+  /** When NU1605 cascade resolution gives up. */
+  manualIntervention?: {
+    reason: string;
+    projects: string[];
+    packageIds: string[];
+  };
+}
+
 export interface HostProjectStatusMessage {
   type: 'host:projectStatus';
   projectPath: string;
@@ -119,7 +170,9 @@ export type HostMessage =
   | HostSourceAuthRequiredMessage
   | HostReadmeMessage
   | HostErrorMessage
-  | HostStatusMessage;
+  | HostStatusMessage
+  | HostDiagnosticsMessage
+  | HostFixResultMessage;
 
 // ── Webview → Host ──────────────────────────────────────────────────────────
 
@@ -221,6 +274,24 @@ export interface ViewOpenSettingsMessage {
   type: 'view:openSettings';
 }
 
+export interface ViewApplyDiagnosticFixMessage {
+  type: 'view:applyDiagnosticFix';
+  key: string;
+  fix: DiagnosticFix;
+}
+
+export interface ViewSuppressDiagnosticCodeMessage {
+  type: 'view:suppressDiagnosticCode';
+  code: string;
+  suppressed: boolean;
+}
+
+export interface ViewRevealPackageMessage {
+  type: 'view:revealPackage';
+  projectPath: string;
+  packageId: string;
+}
+
 export type ViewMessage =
   | ViewReadyMessage
   | ViewRefreshMessage
@@ -235,4 +306,7 @@ export type ViewMessage =
   | ViewRemoveSourceMessage
   | ViewToggleSourceMessage
   | ViewFetchReadmeMessage
-  | ViewOpenSettingsMessage;
+  | ViewOpenSettingsMessage
+  | ViewApplyDiagnosticFixMessage
+  | ViewSuppressDiagnosticCodeMessage
+  | ViewRevealPackageMessage;
