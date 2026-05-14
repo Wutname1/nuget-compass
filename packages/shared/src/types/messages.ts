@@ -304,6 +304,24 @@ export interface ViewUpdateAllMessage {
   projectPath: string;
 }
 
+/**
+ * Webview-confirmed bulk update across one or more packages and projects.
+ * The host runs the items through the same instrumented loop as the host-side
+ * Update All so the user gets a progress modal, cancel support, the
+ * consecutive-failure abort, and Activity entries — even though the
+ * confirmation happened inside the webview.
+ */
+export interface ViewBulkUpdateMessage {
+  type: 'view:bulkUpdate';
+  items: Array<{
+    packageId: string;
+    toVersion: string;
+    projectPaths: string[];
+  }>;
+  /** Human label for the progress modal title (e.g. "3 packages across 2 projects"). */
+  label?: string;
+}
+
 export interface ViewUninstallPackageMessage {
   type: 'view:uninstallPackage';
   projectPath: string;
@@ -403,6 +421,7 @@ export type ViewMessage =
   | ViewExpandPackageMessage
   | ViewUpdatePackageMessage
   | ViewUpdateAllMessage
+  | ViewBulkUpdateMessage
   | ViewUninstallPackageMessage
   | ViewSearchPackagesMessage
   | ViewInstallPackageMessage

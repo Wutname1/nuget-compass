@@ -163,28 +163,21 @@ export function App(): JSX.Element {
 
   function confirmBulkUpdate(): void {
     if (!pendingBulkUpdate) return;
-    let projectCount = 0;
-    for (const item of pendingBulkUpdate) {
-      for (const projectPath of item.projectPaths) {
-        projectCount += 1;
-        vscode.postMessage({
-          type: 'view:updatePackage',
-          projectPath,
-          packageId: item.packageId,
-          toVersion: item.toVersion,
-          confirmed: true,
-        });
-      }
-    }
-    dispatch({
-      type: 'showToast',
-      toast: {
-        id: nextToastId++,
-        kind: 'success',
-        message: `Updating ${pendingBulkUpdate.length} ${
-          pendingBulkUpdate.length === 1 ? 'package' : 'packages'
-        } across ${projectCount} ${projectCount === 1 ? 'project' : 'projects'}.`,
-      },
+    const projectCount = pendingBulkUpdate.reduce(
+      (n, item) => n + item.projectPaths.length,
+      0,
+    );
+    // One message, one progress modal. The host routes this through the same
+    // instrumented loop as the host-side Update All, so the user gets cancel,
+    // minimize, and the consecutive-failure abort behavior.
+    vscode.postMessage({
+      type: 'view:bulkUpdate',
+      items: pendingBulkUpdate.map((item) => ({
+        packageId: item.packageId,
+        toVersion: item.toVersion,
+        projectPaths: item.projectPaths,
+      })),
+      label: `${pendingBulkUpdate.length} package${pendingBulkUpdate.length === 1 ? '' : 's'} across ${projectCount} project${projectCount === 1 ? '' : 's'}`,
     });
     setPendingBulkUpdate(undefined);
   }

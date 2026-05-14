@@ -36,6 +36,18 @@ import {
 import { CredentialVault } from '../dotnet/credentialVault.js';
 
 /**
+ * Normalized work item for a bulk update run. Built from either the host-side
+ * "Update All" command or the webview's confirm-bulk-update modal.
+ */
+interface BulkUpdateItem {
+  projectPath: string;
+  projectName: string;
+  packageId: string;
+  fromVersion: string;
+  toVersion: string;
+}
+
+/**
  * Persisted view of the last enriched scan. Replayed on the next session's
  * first paint so the user sees update arrows instantly.
  */
@@ -464,6 +476,26 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       case 'view:updateAll':
         void this.updateAll(msg.projectPath);
         return;
+      case 'view:bulkUpdate': {
+        const items: BulkUpdateItem[] = [];
+        for (const m of msg.items) {
+          for (const projectPath of m.projectPaths) {
+            const project = this.lastProjects.find((p) => p.path === projectPath);
+            const pkg = project?.packages.find((x) => x.id === m.packageId);
+            items.push({
+              projectPath,
+              projectName: project?.name ?? path.basename(projectPath),
+              packageId: m.packageId,
+              fromVersion: pkg?.resolvedVersion ?? '?',
+              toVersion: m.toVersion,
+            });
+          }
+        }
+        const label = msg.label
+          ?? `${msg.items.length} package${msg.items.length === 1 ? '' : 's'}`;
+        void this.runBulkUpdate(items, label);
+        return;
+      }
       case 'view:uninstallPackage':
         void this.uninstallPackage(msg.projectPath, msg.packageId);
         return;
@@ -748,6 +780,11 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
+  /**
+   * Host-side "Update All" for a single project — prompts via VS Code's modal
+   * then delegates to runBulkUpdate so the user gets the same progress modal
+   * and cancel support as a webview-confirmed bulk update.
+   */
   private async updateAll(projectPath: string): Promise<void> {
     const project = this.lastProjects.find((p) => p.path === projectPath);
     if (!project) return;
@@ -774,30 +811,49 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     );
     if (choice !== 'Update All') return;
 
-    const runId = `update-all-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const items: BulkUpdateItem[] = rows.map((r) => ({
+      projectPath,
+      projectName: project.name,
+      packageId: r.package.id,
+      fromVersion: r.package.resolvedVersion,
+      toVersion: r.newestAllowed!,
+    }));
+    await this.runBulkUpdate(items, project.name);
+  }
+
+  /**
+   * Run a bulk update: sequential dotnet add calls with progress posted to the
+   * webview, cancel honored via view:cancelBulkOperation, and an automatic
+   * abort after CONSECUTIVE_FAILURE_ABORT failures in a row (one NU1605 in a
+   * project almost always cascades — pressing on costs the user time without
+   * helping them).
+   */
+  private async runBulkUpdate(items: BulkUpdateItem[], label: string): Promise<void> {
+    if (items.length === 0) return;
+
+    const runId = `bulk-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     this.activeBulk = { id: runId, cancelled: false };
     const startedAt = Date.now();
     this.post({ type: 'host:status', status: 'fetching' });
-    logger.info(
-      `Starting Update All for ${project.name} (${rows.length} package(s))`,
-      { category: 'update', context: { projectName: project.name, projectPath } },
-    );
+    logger.info(`Starting bulk update for ${label} (${items.length} package(s))`, {
+      category: 'update',
+    });
 
     const failures: string[] = [];
-    /** Bail early once the project clearly has a sticky conflict. */
     const CONSECUTIVE_FAILURE_ABORT = 3;
     let consecutiveFailures = 0;
     let abortedForFailures = false;
     let succeeded = 0;
+    const touchedProjects = new Set<string>();
 
     const emitProgress = (current: number, currentItem?: string): void => {
       if (this.activeBulk?.id !== runId) return;
       const state = {
         id: runId,
         kind: 'update-all' as const,
-        projectName: project.name,
+        projectName: label,
         current,
-        total: rows.length,
+        total: items.length,
         currentItem,
         cancellable: true,
         cancelRequested: this.activeBulk.cancelled,
@@ -812,72 +868,63 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     emitProgress(0);
 
     try {
-      // Sequential to avoid SDK contention on the same project file.
-      for (let i = 0; i < rows.length; i++) {
+      for (let i = 0; i < items.length; i++) {
         if (this.activeBulk?.cancelled) {
           logger.warn(
-            `Update All cancelled after ${i} of ${rows.length} package(s) in ${project.name}.`,
-            { category: 'update', context: { projectName: project.name, projectPath } },
+            `Bulk update cancelled after ${i} of ${items.length} package(s).`,
+            { category: 'update' },
           );
-          failures.push(`Cancelled. ${rows.length - i} package(s) were not updated.`);
+          failures.push(`Cancelled. ${items.length - i} package(s) were not updated.`);
           break;
         }
-        const row = rows[i]!;
+        const item = items[i]!;
         const ctx = {
-          projectName: project.name,
-          projectPath,
-          packageId: row.package.id,
-          version: row.newestAllowed!,
+          projectName: item.projectName,
+          projectPath: item.projectPath,
+          packageId: item.packageId,
+          version: item.toVersion,
         };
-        emitProgress(i + 1, `${row.package.id} → ${row.newestAllowed!}`);
+        emitProgress(i + 1, `${item.packageId} → ${item.toVersion}`);
         logger.info(
-          `Updating ${row.package.id} ${row.package.resolvedVersion} → ${row.newestAllowed!} (${i + 1}/${rows.length})`,
+          `Updating ${item.packageId} ${item.fromVersion} → ${item.toVersion} in ${item.projectName} (${i + 1}/${items.length})`,
           { category: 'update', context: ctx },
         );
-        this.selfMutations.add(`${projectPath}::${row.package.id}`);
+        this.selfMutations.add(`${item.projectPath}::${item.packageId}`);
+        touchedProjects.add(item.projectPath);
         const result = await this.enqueueMutation(() =>
           addPackage(
-            projectPath,
-            path.dirname(projectPath),
-            row.package.id,
-            row.newestAllowed!,
+            item.projectPath,
+            path.dirname(item.projectPath),
+            item.packageId,
+            item.toVersion,
           ),
         );
         if (!result.success) {
           consecutiveFailures += 1;
           failures.push(
-            `${row.package.id} -> ${row.newestAllowed!}: ${firstLine(result.output)}`,
+            `${item.packageId} -> ${item.toVersion} in ${item.projectName}: ${firstLine(result.output)}`,
           );
           logger.error(
-            `Update failed: ${row.package.id} → ${row.newestAllowed!}`,
+            `Update failed: ${item.packageId} → ${item.toVersion} in ${item.projectName}`,
             { category: 'update', context: ctx, detail: result.output },
           );
         } else {
           consecutiveFailures = 0;
           succeeded += 1;
           logger.info(
-            `Updated ${row.package.id} → ${row.newestAllowed!}`,
+            `Updated ${item.packageId} → ${item.toVersion} in ${item.projectName}`,
             { category: 'update', context: ctx },
           );
         }
-        // Even on success, parse for warnings (NU1903 vulnerabilities, etc.)
-        // so we surface them in our UI instead of letting C# Dev Kit's
-        // popup be the user's only signal.
-        this.surfaceUpdateDiagnostics([projectPath], result.output);
+        this.surfaceUpdateDiagnostics([item.projectPath], result.output);
+        emitProgress(i + 1, `${item.packageId} → ${item.toVersion}`);
 
-        // Repaint progress with fresh succeeded/failed counts.
-        emitProgress(i + 1, `${row.package.id} → ${row.newestAllowed!}`);
-
-        // One NU1605 in a project almost always cascades: the .csproj is
-        // now in a state where every subsequent add fails with the same
-        // downgrade. Bail rather than burning through 20 more dotnet
-        // invocations that we already know will all fail.
         if (consecutiveFailures >= CONSECUTIVE_FAILURE_ABORT) {
           abortedForFailures = true;
-          const remaining = rows.length - i - 1;
+          const remaining = items.length - i - 1;
           logger.warn(
-            `Aborting Update All after ${consecutiveFailures} consecutive failures. ${remaining} package(s) were skipped — fix the downgrade conflict first.`,
-            { category: 'update', context: { projectName: project.name, projectPath } },
+            `Aborting bulk update after ${consecutiveFailures} consecutive failures. ${remaining} package(s) were skipped — fix the downgrade conflict first.`,
+            { category: 'update' },
           );
           break;
         }
@@ -897,22 +944,20 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     }
 
     if (failures.length === 0) {
-      logger.info(`Update All complete: ${rows.length} package(s) updated.`, {
+      logger.info(`Bulk update complete: ${items.length} package(s) updated.`, {
         category: 'update',
-        context: { projectName: project.name, projectPath },
       });
       void vscode.window.showInformationMessage(
-        `Updated ${rows.length} package(s) in ${project.name}.`,
+        `Updated ${items.length} package(s) in ${label}.`,
       );
     } else {
       const headline = abortedForFailures
         ? `Stopped after ${CONSECUTIVE_FAILURE_ABORT} consecutive failures. Open the Activity tab for details.`
-        : `${failures.length} of ${rows.length} updates failed. Open the Activity tab for details.`;
+        : `${failures.length} of ${items.length} updates failed. Open the Activity tab for details.`;
       logger.warn(
-        `Update All finished with ${failures.length}/${rows.length} failure(s) in ${project.name}.`,
+        `Bulk update finished with ${failures.length}/${items.length} failure(s).`,
         {
           category: 'update',
-          context: { projectName: project.name, projectPath },
           detail: failures.join('\n'),
         },
       );
