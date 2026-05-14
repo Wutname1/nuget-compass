@@ -2,6 +2,7 @@ import type {
   ActivityCategory,
   ActivityEntry,
   ActivityLevel,
+  BulkProgressState,
   Diagnostic,
   FilterState,
   HostMessage,
@@ -111,6 +112,20 @@ export interface AppState {
   activityFilters: ActivityFilters;
   /** Highest activity id seen while the Activity tab was active. */
   activityLastSeenId: number;
+  /** Current bulk operation, if any; drives the progress modal. */
+  bulkProgress?: BulkProgressState;
+  /** Last completed bulk operation summary, kept until user dismisses it. */
+  bulkResult?: {
+    id: string;
+    succeeded: number;
+    failed: number;
+    cancelled: boolean;
+    aborted: boolean;
+    /** Project label captured at completion time for the result toast. */
+    projectName?: string;
+  };
+  /** When true, the progress modal is collapsed to a header pill. */
+  bulkProgressMinimized: boolean;
 }
 
 const ACTIVITY_CAP = 500;
@@ -140,6 +155,7 @@ export const initialState: AppState = {
   activity: [],
   activityFilters: defaultActivityFilters,
   activityLastSeenId: 0,
+  bulkProgressMinimized: false,
 };
 
 export function readmeKey(packageId: string, version: string): string {
@@ -163,7 +179,10 @@ export type Action =
   | { type: 'fixStarted'; key: string }
   | { type: 'dismissFixResult'; key: string }
   | { type: 'setActivityLevel'; level: ActivityLevel; enabled: boolean }
-  | { type: 'setActivityCategory'; category: ActivityCategory | 'all' };
+  | { type: 'setActivityCategory'; category: ActivityCategory | 'all' }
+  | { type: 'minimizeBulkProgress' }
+  | { type: 'restoreBulkProgress' }
+  | { type: 'dismissBulkResult' };
 
 export function packageKey(projectPath: string, packageId: string): string {
   return `${projectPath}::${packageId}`;
@@ -230,6 +249,12 @@ export function reducer(state: AppState, action: Action): AppState {
         ...state,
         activityFilters: { ...state.activityFilters, category: action.category },
       };
+    case 'minimizeBulkProgress':
+      return { ...state, bulkProgressMinimized: true };
+    case 'restoreBulkProgress':
+      return { ...state, bulkProgressMinimized: false };
+    case 'dismissBulkResult':
+      return { ...state, bulkResult: undefined };
     case 'host':
       return applyHostMessage(state, action.message);
   }
@@ -333,6 +358,31 @@ function applyHostMessage(state: AppState, msg: HostMessage): AppState {
     }
     case 'host:activityCleared':
       return { ...state, activity: [], activityLastSeenId: 0 };
+    case 'host:bulkProgress':
+      return {
+        ...state,
+        bulkProgress: msg.state,
+        // A new run un-minimizes itself so the user sees it.
+        bulkProgressMinimized:
+          state.bulkProgress?.id === msg.state.id ? state.bulkProgressMinimized : false,
+        bulkResult: undefined,
+      };
+    case 'host:bulkCompleted': {
+      const projectName = state.bulkProgress?.projectName;
+      return {
+        ...state,
+        bulkProgress: undefined,
+        bulkProgressMinimized: false,
+        bulkResult: {
+          id: msg.id,
+          succeeded: msg.succeeded,
+          failed: msg.failed,
+          cancelled: msg.cancelled,
+          aborted: msg.aborted ?? false,
+          projectName,
+        },
+      };
+    }
     case 'host:fixResult': {
       const inFlight = { ...state.fixesInFlight };
       delete inFlight[msg.key];

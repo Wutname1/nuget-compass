@@ -8,6 +8,7 @@ import { InstalledList } from './components/InstalledList.js';
 import { BrowsePanel } from './components/BrowsePanel.js';
 import { UpdatesPanel } from './components/UpdatesPanel.js';
 import { ActivityPanel } from './components/ActivityPanel.js';
+import { BulkProgressModal, BulkProgressPill } from './components/BulkProgressModal.js';
 import {
   DetailPanel,
   type DetailSelection,
@@ -54,6 +55,21 @@ export function App(): JSX.Element {
       dispatch({ type: 'host', message: msg });
       if (msg.type === 'host:packageRows' || msg.type === 'host:projects') {
         setRefreshing(false);
+      }
+      if (msg.type === 'host:bulkCompleted') {
+        const noun =
+          msg.succeeded === 1 ? 'package' : 'packages';
+        const summary = msg.cancelled
+          ? `Cancelled. ${msg.succeeded} ${noun} updated, ${msg.failed} failed.`
+          : msg.aborted
+            ? `Stopped after repeated failures. ${msg.succeeded} ${noun} updated, ${msg.failed} failed.`
+            : msg.failed > 0
+              ? `${msg.succeeded} of ${msg.succeeded + msg.failed} ${noun} updated.`
+              : `${msg.succeeded} ${noun} updated.`;
+        dispatch({
+          type: 'showToast',
+          toast: { id: nextToastId++, kind: msg.failed > 0 ? 'info' : 'success', message: summary },
+        });
       }
     };
     window.addEventListener('message', onMessage);
@@ -225,6 +241,19 @@ export function App(): JSX.Element {
           ) : null}
         </h1>
         <div className="app-header-actions">
+          {state.bulkProgress && state.bulkProgressMinimized ? (
+            <BulkProgressPill
+              state={state.bulkProgress}
+              onRestore={() => dispatch({ type: 'restoreBulkProgress' })}
+              onCancel={() =>
+                state.bulkProgress &&
+                vscode.postMessage({
+                  type: 'view:cancelBulkOperation',
+                  id: state.bulkProgress.id,
+                })
+              }
+            />
+          ) : null}
           <button
             type="button"
             className={'icon-button' + (refreshing ? ' icon-button-spinning' : '')}
@@ -557,6 +586,20 @@ export function App(): JSX.Element {
             credentialStore: state.authPrompt.credentialStore,
           }}
           onClose={() => dispatch({ type: 'dismissAuthPrompt' })}
+        />
+      ) : null}
+
+      {state.bulkProgress && !state.bulkProgressMinimized ? (
+        <BulkProgressModal
+          state={state.bulkProgress}
+          onMinimize={() => dispatch({ type: 'minimizeBulkProgress' })}
+          onCancel={() =>
+            state.bulkProgress &&
+            vscode.postMessage({
+              type: 'view:cancelBulkOperation',
+              id: state.bulkProgress.id,
+            })
+          }
         />
       ) : null}
 

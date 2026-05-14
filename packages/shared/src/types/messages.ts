@@ -204,6 +204,46 @@ export interface HostActivityClearedMessage {
   type: 'host:activityCleared';
 }
 
+// ── Bulk-update progress ────────────────────────────────────────────────────
+
+export type BulkOperationKind = 'update-all' | 'bulk-update';
+
+export interface BulkProgressState {
+  /** Stable id for this run; webview cancel messages echo this back. */
+  id: string;
+  kind: BulkOperationKind;
+  /** Project (or project group) the run is targeting. */
+  projectName?: string;
+  /** Indexes are 1-based for display. */
+  current: number;
+  total: number;
+  /** Most recent line of human-readable status, e.g. "Updating Newtonsoft.Json". */
+  currentItem?: string;
+  /** When true, the host will honor a view:cancelBulkOperation message. */
+  cancellable: boolean;
+  /** Set once the loop has acknowledged a cancel request. */
+  cancelRequested?: boolean;
+  /** Counts kept up to date so the modal can show "3 failures so far". */
+  succeeded: number;
+  failed: number;
+  startedAt: number;
+}
+
+export interface HostBulkProgressMessage {
+  type: 'host:bulkProgress';
+  state: BulkProgressState;
+}
+
+export interface HostBulkCompletedMessage {
+  type: 'host:bulkCompleted';
+  id: string;
+  succeeded: number;
+  failed: number;
+  cancelled: boolean;
+  /** Set when the loop bailed early after consecutive failures. */
+  aborted?: boolean;
+}
+
 export type HostMessage =
   | HostInitMessage
   | HostFontScaleMessage
@@ -220,7 +260,9 @@ export type HostMessage =
   | HostDiagnosticsMessage
   | HostFixResultMessage
   | HostActivityMessage
-  | HostActivityClearedMessage;
+  | HostActivityClearedMessage
+  | HostBulkProgressMessage
+  | HostBulkCompletedMessage;
 
 // ── Webview → Host ──────────────────────────────────────────────────────────
 
@@ -348,6 +390,12 @@ export interface ViewRevealOutputChannelMessage {
   type: 'view:revealOutputChannel';
 }
 
+export interface ViewCancelBulkOperationMessage {
+  type: 'view:cancelBulkOperation';
+  /** Which run to cancel; lets late cancels for a finished run be ignored. */
+  id: string;
+}
+
 export type ViewMessage =
   | ViewReadyMessage
   | ViewRefreshMessage
@@ -367,4 +415,5 @@ export type ViewMessage =
   | ViewSuppressDiagnosticCodeMessage
   | ViewRevealPackageMessage
   | ViewClearActivityMessage
-  | ViewRevealOutputChannelMessage;
+  | ViewRevealOutputChannelMessage
+  | ViewCancelBulkOperationMessage;
