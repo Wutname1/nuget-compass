@@ -10,13 +10,32 @@ export function StatusBanner({
   onOpenActivity,
 }: StatusBannerProps): JSX.Element | null {
   if (error) {
+    // Strip our own "Open the Activity tab for details." trailer if present so
+    // we can replace it with a real button instead of static text.
+    const rawMessage = error.message;
+    const cleanedMessage = rawMessage.replace(
+      /\.?\s*Open the Activity tab for details\.?\s*$/i,
+      '.',
+    );
+    const referencesActivity = cleanedMessage !== rawMessage;
     return (
       <div className="banner banner-error" role="alert">
         <div className="banner-body">
-          <strong>{error.message}</strong>
+          <strong>{cleanedMessage}</strong>
+          {(referencesActivity || error.detail) && onOpenActivity ? (
+            <div className="banner-cta">
+              <button
+                type="button"
+                className="banner-link"
+                onClick={onOpenActivity}
+              >
+                Open Activity log →
+              </button>
+            </div>
+          ) : null}
           {error.detail ? <pre className="banner-detail">{error.detail}</pre> : null}
         </div>
-        {onOpenActivity ? (
+        {onOpenActivity && !referencesActivity ? (
           <button
             type="button"
             className="btn-secondary banner-action"

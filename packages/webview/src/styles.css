@@ -851,6 +851,10 @@ input[type='checkbox'] {
   min-width: 0;
 }
 
+.banner-cta {
+  margin-top: 4px;
+}
+
 .banner-action {
   margin-left: auto;
   flex-shrink: 0;
@@ -2119,6 +2123,8 @@ input[type='checkbox'] {
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .activity-toolbar {
@@ -2130,6 +2136,10 @@ input[type='checkbox'] {
   border-bottom: 1px solid var(--nc-border-soft);
   background: var(--nc-bg-section);
   flex-wrap: wrap;
+  flex: 0 0 auto;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .activity-filters {
@@ -2195,11 +2205,16 @@ input[type='checkbox'] {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
+  display: flex;
 }
 
 .activity-list {
-  height: 100%;
-  overflow: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 0.2rem 0 1.5rem;
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 0.846rem;

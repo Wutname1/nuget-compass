@@ -628,16 +628,30 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       { category: 'update', context: { projectName: project.name, projectPath } },
     );
     const failures: string[] = [];
+    /** Bail early once the project clearly has a sticky conflict. */
+    const CONSECUTIVE_FAILURE_ABORT = 3;
+    let consecutiveFailures = 0;
+    let abortedForFailures = false;
     try {
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
           title: `Updating packages in ${project.name}`,
-          cancellable: false,
+          cancellable: true,
         },
-        async (progress) => {
+        async (progress, token) => {
           // Sequential to avoid SDK contention on the same project file.
           for (let i = 0; i < rows.length; i++) {
+            if (token.isCancellationRequested) {
+              logger.warn(
+                `Update All cancelled after ${i} of ${rows.length} package(s) in ${project.name}.`,
+                { category: 'update', context: { projectName: project.name, projectPath } },
+              );
+              failures.push(
+                `Cancelled. ${rows.length - i} package(s) were not updated.`,
+              );
+              return;
+            }
             const row = rows[i]!;
             const ctx = {
               projectName: project.name,
@@ -662,6 +676,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
               ),
             );
             if (!result.success) {
+              consecutiveFailures += 1;
               failures.push(
                 `${row.package.id} -> ${row.newestAllowed!}: ${firstLine(result.output)}`,
               );
@@ -670,6 +685,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
                 { category: 'update', context: ctx, detail: result.output },
               );
             } else {
+              consecutiveFailures = 0;
               logger.info(
                 `Updated ${row.package.id} → ${row.newestAllowed!}`,
                 { category: 'update', context: ctx },
@@ -679,6 +695,20 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
             // so we surface them in our UI instead of letting C# Dev Kit's
             // popup be the user's only signal.
             this.surfaceUpdateDiagnostics([projectPath], result.output);
+
+            // One NU1605 in a project almost always cascades: the .csproj is
+            // now in a state where every subsequent add fails with the same
+            // downgrade. Bail rather than burning through 20 more dotnet
+            // invocations that we already know will all fail.
+            if (consecutiveFailures >= CONSECUTIVE_FAILURE_ABORT) {
+              abortedForFailures = true;
+              const remaining = rows.length - i - 1;
+              logger.warn(
+                `Aborting Update All after ${consecutiveFailures} consecutive failures. ${remaining} package(s) were skipped — fix the downgrade conflict first.`,
+                { category: 'update', context: { projectName: project.name, projectPath } },
+              );
+              return;
+            }
           }
         },
       );
@@ -695,6 +725,9 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         `Updated ${rows.length} package(s) in ${project.name}.`,
       );
     } else {
+      const headline = abortedForFailures
+        ? `Stopped after ${CONSECUTIVE_FAILURE_ABORT} consecutive failures. Open the Activity tab for details.`
+        : `${failures.length} of ${rows.length} updates failed. Open the Activity tab for details.`;
       logger.warn(
         `Update All finished with ${failures.length}/${rows.length} failure(s) in ${project.name}.`,
         {
@@ -705,7 +738,7 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       );
       this.post({
         type: 'host:error',
-        message: `${failures.length} of ${rows.length} updates failed. Open the Activity tab for details.`,
+        message: headline,
         detail: failures.join('\n'),
       });
     }
