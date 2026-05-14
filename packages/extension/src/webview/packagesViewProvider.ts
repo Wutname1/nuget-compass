@@ -46,6 +46,13 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     credentialStore: 'nuget-config' | 'vscode-secrets' | 'none';
     authFailed?: boolean;
   }[] = [];
+  /** Serializes mutating `dotnet` invocations (add/remove) so concurrent bulk
+   *  updates don't race each other or an in-flight scan. */
+  private mutationQueue: Promise<unknown> = Promise.resolve();
+  /** In-flight count of queued mutations; while > 0, refresh() is deferred. */
+  private pendingMutations = 0;
+  /** Set when a refresh was requested while mutations were in flight. */
+  private refreshPending = false;
 
   constructor(private readonly context: vscode.ExtensionContext) {
     this.catalog = createCatalogClient(context);
@@ -68,7 +75,33 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   }
 
   refresh(): void {
+    if (this.pendingMutations > 0) {
+      this.refreshPending = true;
+      return;
+    }
     void this.runRefresh();
+  }
+
+  /**
+   * Run a mutating dotnet operation (add/remove/install) serialized against
+   * every other mutation. This prevents concurrent .csproj/lockfile writes
+   * from corrupting each other and from racing an in-flight workspace scan
+   * (which would surface as "dotnet package list JSON did not match expected
+   * schema" errors).
+   */
+  private enqueueMutation<T>(fn: () => Promise<T>): Promise<T> {
+    this.pendingMutations += 1;
+    const next = this.mutationQueue.then(fn, fn);
+    this.mutationQueue = next.catch(() => {
+      /* errors handled by caller */
+    });
+    return next.finally(() => {
+      this.pendingMutations -= 1;
+      if (this.pendingMutations === 0 && this.refreshPending) {
+        this.refreshPending = false;
+        void this.runRefresh();
+      }
+    });
   }
 
   async forceRefresh(): Promise<void> {
@@ -401,11 +434,8 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
 
     this.post({ type: 'host:status', status: 'fetching' });
     try {
-      const result = await addPackage(
-        projectPath,
-        path.dirname(projectPath),
-        packageId,
-        toVersion,
+      const result = await this.enqueueMutation(() =>
+        addPackage(projectPath, path.dirname(projectPath), packageId, toVersion),
       );
       if (!result.success) {
         logger.error(`update failed: ${result.output}`);
@@ -419,9 +449,8 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
         return;
       }
       logger.info(`updated ${packageId} -> ${toVersion}`);
-      void vscode.window.showInformationMessage(`Updated ${packageId} to ${toVersion}.`);
-      // Re-scan to reflect the new resolvedVersion. Cheaper than refreshing
-      // the whole workspace, but using the existing path keeps the code small.
+      // Refresh is deferred until every queued mutation drains, so a bulk
+      // update produces one workspace scan rather than N racing scans.
       this.refresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -467,11 +496,13 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     try {
       // Sequential to avoid SDK contention on the same project file.
       for (const row of rows) {
-        const result = await addPackage(
-          projectPath,
-          path.dirname(projectPath),
-          row.package.id,
-          row.newestAllowed!,
+        const result = await this.enqueueMutation(() =>
+          addPackage(
+            projectPath,
+            path.dirname(projectPath),
+            row.package.id,
+            row.newestAllowed!,
+          ),
         );
         if (!result.success) {
           failures.push(`${row.package.id} -> ${row.newestAllowed!}: ${firstLine(result.output)}`);
@@ -509,7 +540,9 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
 
     this.post({ type: 'host:status', status: 'fetching' });
     try {
-      const result = await removePackage(projectPath, path.dirname(projectPath), packageId);
+      const result = await this.enqueueMutation(() =>
+        removePackage(projectPath, path.dirname(projectPath), packageId),
+      );
       if (!result.success) {
         this.post({
           type: 'host:error',
@@ -581,19 +614,21 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       // addPackage requires a version; if none supplied, omit the --version arg.
       // Easiest path: call dotnet directly when version is omitted.
       const { runDotnet } = await import('../dotnet/exec.js');
-      const result = version
-        ? await addPackage(...args)
-        : await (async () => {
-            const r = await runDotnet(
-              ['add', projectPath, 'package', packageId],
-              path.dirname(projectPath),
-              60_000,
-            );
-            return {
-              success: r.code === 0,
-              output: [r.stdout, r.stderr].filter((s) => s.trim().length > 0).join('\n'),
-            };
-          })();
+      const result = await this.enqueueMutation(() =>
+        version
+          ? addPackage(...args)
+          : (async () => {
+              const r = await runDotnet(
+                ['add', projectPath, 'package', packageId],
+                path.dirname(projectPath),
+                60_000,
+              );
+              return {
+                success: r.code === 0,
+                output: [r.stdout, r.stderr].filter((s) => s.trim().length > 0).join('\n'),
+              };
+            })(),
+      );
       if (!result.success) {
         this.post({
           type: 'host:error',
