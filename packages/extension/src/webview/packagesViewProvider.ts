@@ -19,6 +19,7 @@ import { scanVulnerabilities, type VulnerabilitiesByPackage } from '../dotnet/vu
 import { scanDeprecations, type DeprecationsByPackage } from '../dotnet/deprecated.js';
 import { addPackage } from '../dotnet/addPackage.js';
 import { removePackage } from '../dotnet/removePackage.js';
+import { restoreProject } from '../dotnet/restore.js';
 import {
   parseDiagnosticsFromOutput,
   dedupeDiagnostics,
@@ -846,11 +847,22 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   }
 
   /**
-   * Run a bulk update: sequential dotnet add calls with progress posted to the
-   * webview, cancel honored via view:cancelBulkOperation, and an automatic
-   * abort after CONSECUTIVE_FAILURE_ABORT failures in a row (one NU1605 in a
-   * project almost always cascades — pressing on costs the user time without
-   * helping them).
+   * Run a bulk update in two phases that mirror what Visual Studio does:
+   *
+   * Phase 1: For each (project, package, version) item, write the
+   *          PackageReference change with `dotnet add package --no-restore`.
+   *          This is just XML editing, so failures are rare (typically only
+   *          NU1202 from `dotnet add` rejecting an outright incompatible
+   *          package at parse time).
+   *
+   * Phase 2: For each project we touched, run `dotnet restore` once. The
+   *          restore now sees the *final* version set and conflict resolution
+   *          runs holistically, instead of failing mid-loop on transient
+   *          downgrade conflicts ("EFCore 10 wants Logging ≥10 but Logging
+   *          is still 8 — we haven't gotten to it yet").
+   *
+   * Cancel honored between every dotnet call. Progress emits per item during
+   * phase 1 and per project during phase 2 so the modal keeps moving.
    */
   private async runBulkUpdate(items: BulkUpdateItem[], label: string): Promise<void> {
     if (items.length === 0) return;
@@ -863,42 +875,47 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       category: 'update',
     });
 
+    // Phase 1 totals: each XML write is one step. Phase 2 adds one step per
+    // touched project. Total starts at items.length and grows once we know
+    // how many projects were actually touched.
     const failures: string[] = [];
-    const CONSECUTIVE_FAILURE_ABORT = 3;
-    let consecutiveFailures = 0;
-    let abortedForFailures = false;
+    const restoreFailures: string[] = [];
     let succeeded = 0;
-    const touchedProjects = new Set<string>();
+    const touchedProjects = new Map<string, string>();   // path -> name
 
-    const emitProgress = (current: number, currentItem?: string): void => {
+    const emitProgress = (current: number, total: number, currentItem?: string): void => {
       if (this.activeBulk?.id !== runId) return;
       const state = {
         id: runId,
         kind: 'update-all' as const,
         projectName: label,
         current,
-        total: items.length,
+        total,
         currentItem,
         cancellable: true,
         cancelRequested: this.activeBulk.cancelled,
         succeeded,
-        failed: failures.length,
+        failed: failures.length + restoreFailures.length,
         startedAt,
       };
       this.lastBulkProgress = state;
       this.post({ type: 'host:bulkProgress', state });
     };
 
-    emitProgress(0);
+    // Optimistic total — adjusted after phase 1 settles.
+    emitProgress(0, items.length);
+
+    let cancelled = false;
 
     try {
+      // ── Phase 1: write every PackageReference change ──────────────
       for (let i = 0; i < items.length; i++) {
         if (this.activeBulk?.cancelled) {
+          cancelled = true;
           logger.warn(
-            `Bulk update cancelled after ${i} of ${items.length} package(s).`,
+            `Bulk update cancelled after writing ${i} of ${items.length} package(s). No restore will run.`,
             { category: 'update' },
           );
-          failures.push(`Cancelled. ${items.length - i} package(s) were not updated.`);
           break;
         }
         const item = items[i]!;
@@ -908,91 +925,136 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
           packageId: item.packageId,
           version: item.toVersion,
         };
-        emitProgress(i + 1, `${item.packageId} → ${item.toVersion}`);
+        emitProgress(i + 1, items.length, `Writing ${item.packageId} → ${item.toVersion}`);
         logger.info(
-          `Updating ${item.packageId} ${item.fromVersion} → ${item.toVersion} in ${item.projectName} (${i + 1}/${items.length})`,
+          `Writing ${item.packageId} ${item.fromVersion} → ${item.toVersion} in ${item.projectName} (${i + 1}/${items.length})`,
           { category: 'update', context: ctx },
         );
         this.selfMutations.add(`${item.projectPath}::${item.packageId}`);
-        touchedProjects.add(item.projectPath);
+        touchedProjects.set(item.projectPath, item.projectName);
         const result = await this.enqueueMutation(() =>
           addPackage(
             item.projectPath,
             path.dirname(item.projectPath),
             item.packageId,
             item.toVersion,
+            { skipRestore: true },
           ),
         );
         if (!result.success) {
-          consecutiveFailures += 1;
           failures.push(
             `${item.packageId} -> ${item.toVersion} in ${item.projectName}: ${firstLine(result.output)}`,
           );
           logger.error(
-            `Update failed: ${item.packageId} → ${item.toVersion} in ${item.projectName}`,
+            `Write failed: ${item.packageId} → ${item.toVersion} in ${item.projectName}`,
             { category: 'update', context: ctx, detail: result.output },
           );
         } else {
-          consecutiveFailures = 0;
           succeeded += 1;
           logger.info(
-            `Updated ${item.packageId} → ${item.toVersion} in ${item.projectName}`,
+            `Wrote ${item.packageId} → ${item.toVersion} in ${item.projectName}`,
             { category: 'update', context: ctx },
           );
         }
+        // The add output may include warnings even when success=true; surface them.
         this.surfaceUpdateDiagnostics([item.projectPath], result.output);
-        emitProgress(i + 1, `${item.packageId} → ${item.toVersion}`);
+        emitProgress(i + 1, items.length, `Writing ${item.packageId} → ${item.toVersion}`);
+      }
 
-        if (consecutiveFailures >= CONSECUTIVE_FAILURE_ABORT) {
-          abortedForFailures = true;
-          const remaining = items.length - i - 1;
-          logger.warn(
-            `Aborting bulk update after ${consecutiveFailures} consecutive failures. ${remaining} package(s) were skipped — fix the downgrade conflict first.`,
-            { category: 'update' },
+      // ── Phase 2: restore each touched project, once ────────────────
+      if (!cancelled && touchedProjects.size > 0) {
+        const projectList = Array.from(touchedProjects.entries());
+        const totalSteps = items.length + projectList.length;
+        for (let pi = 0; pi < projectList.length; pi++) {
+          if (this.activeBulk?.cancelled) {
+            cancelled = true;
+            logger.warn(
+              `Bulk update cancelled mid-restore (${pi} of ${projectList.length} project(s) restored).`,
+              { category: 'update' },
+            );
+            break;
+          }
+          const [projectPath, projectName] = projectList[pi]!;
+          emitProgress(
+            items.length + pi + 1,
+            totalSteps,
+            `Restoring ${projectName}`,
           );
-          break;
+          logger.info(`Restoring ${projectName}…`, {
+            category: 'restore',
+            context: { projectName, projectPath },
+          });
+          const restoreResult = await this.enqueueMutation(() =>
+            restoreProject(projectPath, path.dirname(projectPath), {
+              timeoutMs: this.dotnetCommandTimeoutMs(),
+            }),
+          );
+          if (!restoreResult.success) {
+            restoreFailures.push(
+              `Restore failed for ${projectName}: ${firstLine(restoreResult.output)}`,
+            );
+            logger.error(`Restore failed for ${projectName}.`, {
+              category: 'restore',
+              context: { projectName, projectPath },
+              detail: restoreResult.output,
+            });
+          } else {
+            logger.info(`Restored ${projectName}.`, {
+              category: 'restore',
+              context: { projectName, projectPath },
+            });
+          }
+          // Parse the restore output for NU-codes regardless of success so
+          // NU1605s and vulnerability warnings surface in our DiagnosticsPanel.
+          this.surfaceUpdateDiagnostics([projectPath], restoreResult.output);
+          emitProgress(
+            items.length + pi + 1,
+            totalSteps,
+            `Restoring ${projectName}`,
+          );
         }
       }
     } finally {
+      const totalFailures = failures.length + restoreFailures.length;
       this.post({
         type: 'host:bulkCompleted',
         id: runId,
         succeeded,
-        failed: failures.length,
+        failed: totalFailures,
         cancelled: Boolean(this.activeBulk?.cancelled),
-        aborted: abortedForFailures,
+        aborted: false,
       });
       this.activeBulk = undefined;
       this.lastBulkProgress = undefined;
-      // Hold the watcher quiet for a cool-down window so the trailing .csproj
-      // write event doesn't fire its own scan after our post-bulk refresh
-      // already consumed selfMutations.
       this.bulkSettlingUntil = Date.now() + 5_000;
       this.post({ type: 'host:status', status: 'idle' });
     }
 
-    if (failures.length === 0) {
-      logger.info(`Bulk update complete: ${items.length} package(s) updated.`, {
+    const allFailures = [...failures, ...restoreFailures];
+    if (allFailures.length === 0) {
+      logger.info(`Bulk update complete: ${items.length} package(s) updated, ${touchedProjects.size} project(s) restored.`, {
         category: 'update',
       });
       void vscode.window.showInformationMessage(
         `Updated ${items.length} package(s) in ${label}.`,
       );
     } else {
-      const headline = abortedForFailures
-        ? `Stopped after ${CONSECUTIVE_FAILURE_ABORT} consecutive failures. Open the Activity tab for details.`
-        : `${failures.length} of ${items.length} updates failed. Open the Activity tab for details.`;
+      const headline = cancelled
+        ? `Cancelled. ${allFailures.length} failure(s) before stopping.`
+        : restoreFailures.length > 0 && failures.length === 0
+          ? `Updates written, but ${restoreFailures.length} project restore(s) failed. Open the Activity tab for details.`
+          : `${allFailures.length} of ${items.length + touchedProjects.size} step(s) failed. Open the Activity tab for details.`;
       logger.warn(
-        `Bulk update finished with ${failures.length}/${items.length} failure(s).`,
+        `Bulk update finished with ${allFailures.length} failure(s).`,
         {
           category: 'update',
-          detail: failures.join('\n'),
+          detail: allFailures.join('\n'),
         },
       );
       this.post({
         type: 'host:error',
         message: headline,
-        detail: failures.join('\n'),
+        detail: allFailures.join('\n'),
       });
     }
     this.refresh();
