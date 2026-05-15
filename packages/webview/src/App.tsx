@@ -8,7 +8,11 @@ import { InstalledList } from './components/InstalledList.js';
 import { BrowsePanel } from './components/BrowsePanel.js';
 import { UpdatesPanel } from './components/UpdatesPanel.js';
 import { ActivityPanel } from './components/ActivityPanel.js';
-import { BulkProgressModal, BulkProgressPill } from './components/BulkProgressModal.js';
+import {
+  BulkProgressModal,
+  BulkProgressPill,
+  BulkResultModal,
+} from './components/BulkProgressModal.js';
 import {
   DetailPanel,
   type DetailSelection,
@@ -56,21 +60,9 @@ export function App(): JSX.Element {
       if (msg.type === 'host:packageRows' || msg.type === 'host:projects') {
         setRefreshing(false);
       }
-      if (msg.type === 'host:bulkCompleted') {
-        const noun =
-          msg.succeeded === 1 ? 'package' : 'packages';
-        const summary = msg.cancelled
-          ? `Cancelled. ${msg.succeeded} ${noun} updated, ${msg.failed} failed.`
-          : msg.aborted
-            ? `Stopped after repeated failures. ${msg.succeeded} ${noun} updated, ${msg.failed} failed.`
-            : msg.failed > 0
-              ? `${msg.succeeded} of ${msg.succeeded + msg.failed} ${noun} updated.`
-              : `${msg.succeeded} ${noun} updated.`;
-        dispatch({
-          type: 'showToast',
-          toast: { id: nextToastId++, kind: msg.failed > 0 ? 'info' : 'success', message: summary },
-        });
-      }
+      // No toast on completion — the result modal stays mounted with a
+      // headline, summary, and Close button so the user knows exactly why
+      // the run ended.
     };
     window.addEventListener('message', onMessage);
     vscode.postMessage({ type: 'view:ready' });
@@ -594,6 +586,17 @@ export function App(): JSX.Element {
               id: state.bulkProgress.id,
             })
           }
+        />
+      ) : null}
+
+      {!state.bulkProgress && state.bulkResult ? (
+        <BulkResultModal
+          result={state.bulkResult}
+          onClose={() => dispatch({ type: 'dismissBulkResult' })}
+          onOpenActivity={() => {
+            dispatch({ type: 'dismissBulkResult' });
+            setTab('activity');
+          }}
         />
       ) : null}
 

@@ -150,10 +150,20 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     void this.runRefresh();
   }
 
-  /** True while a bulk run is active. Used by the watcher to suppress noisy
-   *  "external change" log entries we caused ourselves. */
+  /**
+   * Timestamp (epoch ms) at which the most recent bulk run ended. The file
+   * watcher's debounce can fire after activeBulk has cleared but before our
+   * post-bulk scan settles, racing with selfMutations and producing fake
+   * "external change" entries. The watcher checks this to ignore events for
+   * a short cool-down window.
+   */
+  private bulkSettlingUntil = 0;
+
+  /** True while a bulk run is active *or* still settling. Used by the file
+   *  watcher to suppress noisy "external change" log entries we caused
+   *  ourselves. */
   isBulkRunActive(): boolean {
-    return Boolean(this.activeBulk);
+    return Boolean(this.activeBulk) || Date.now() < this.bulkSettlingUntil;
   }
 
   /**
@@ -954,6 +964,10 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       });
       this.activeBulk = undefined;
       this.lastBulkProgress = undefined;
+      // Hold the watcher quiet for a cool-down window so the trailing .csproj
+      // write event doesn't fire its own scan after our post-bulk refresh
+      // already consumed selfMutations.
+      this.bulkSettlingUntil = Date.now() + 5_000;
       this.post({ type: 'host:status', status: 'idle' });
     }
 

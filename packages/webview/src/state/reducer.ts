@@ -121,7 +121,9 @@ export interface AppState {
     failed: number;
     cancelled: boolean;
     aborted: boolean;
-    /** Project label captured at completion time for the result toast. */
+    /** Total items in the run (so we can show "10 of 13 skipped"). */
+    total: number;
+    /** Project label captured at completion time for the result modal. */
     projectName?: string;
   };
   /** When true, the progress modal is collapsed to a header pill. */
@@ -369,9 +371,14 @@ function applyHostMessage(state: AppState, msg: HostMessage): AppState {
       };
     case 'host:bulkCompleted': {
       const projectName = state.bulkProgress?.projectName;
+      const total = state.bulkProgress?.total ?? msg.succeeded + msg.failed;
       return {
         ...state,
         bulkProgress: undefined,
+        // Keep the modal mounted so the user always sees *why* the run
+        // stopped. They close it explicitly; we never close it for them.
+        // (Minimization is reset; once a run is done there's nothing to
+        // minimize toward.)
         bulkProgressMinimized: false,
         bulkResult: {
           id: msg.id,
@@ -380,6 +387,7 @@ function applyHostMessage(state: AppState, msg: HostMessage): AppState {
           cancelled: msg.cancelled,
           aborted: msg.aborted ?? false,
           projectName,
+          total,
         },
       };
     }

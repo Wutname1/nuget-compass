@@ -87,6 +87,99 @@ export function BulkProgressModal({ state, onCancel, onMinimize }: Props): JSX.E
   );
 }
 
+export interface BulkResultState {
+  succeeded: number;
+  failed: number;
+  total: number;
+  cancelled: boolean;
+  aborted: boolean;
+  projectName?: string;
+}
+
+interface ResultProps {
+  result: BulkResultState;
+  onClose: () => void;
+  onOpenActivity: () => void;
+}
+
+/**
+ * Stays on screen after the run completes. We never close it automatically —
+ * the user must read why the run stopped and dismiss it explicitly. That
+ * matters most when the auto-abort kicks in: a vanished modal with no
+ * explanation leaves the user wondering whether anything happened at all.
+ */
+export function BulkResultModal({
+  result,
+  onClose,
+  onOpenActivity,
+}: ResultProps): JSX.Element {
+  const skipped = Math.max(0, result.total - result.succeeded - result.failed);
+  const headline = result.cancelled
+    ? 'Run cancelled'
+    : result.aborted
+      ? 'Stopped after repeated failures'
+      : result.failed > 0
+        ? 'Run finished with errors'
+        : 'All updates completed';
+
+  const subtitle = result.cancelled
+    ? `You cancelled the run after ${result.succeeded} successful update${result.succeeded === 1 ? '' : 's'}. ${skipped} package${skipped === 1 ? '' : 's'} ${skipped === 1 ? 'was' : 'were'} not attempted.`
+    : result.aborted
+      ? `Three updates failed in a row — the project file is in a state where every later add will hit the same downgrade conflict. ${skipped} package${skipped === 1 ? '' : 's'} ${skipped === 1 ? 'was' : 'were'} skipped. Fix the downgrade first, then run Update All again.`
+      : result.failed > 0
+        ? `${result.failed} update${result.failed === 1 ? '' : 's'} failed. Look at the Activity log for the dotnet output and any NU-code diagnostics.`
+        : `${result.succeeded} package${result.succeeded === 1 ? '' : 's'} updated cleanly.`;
+
+  const tone = result.cancelled
+    ? 'cancelled'
+    : result.aborted || result.failed > 0
+      ? 'error'
+      : 'ok';
+
+  return (
+    <div className="bulk-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="bulk-result-title">
+      <div className="bulk-modal">
+        <div className="bulk-modal-head">
+          <div>
+            <h2 className="bulk-modal-title" id="bulk-result-title">
+              {headline}
+              {result.projectName ? (
+                <span className="bulk-modal-project"> · {result.projectName}</span>
+              ) : null}
+            </h2>
+            <p className={`bulk-modal-summary bulk-modal-summary-${tone}`}>{subtitle}</p>
+          </div>
+        </div>
+
+        <div className="bulk-modal-stats">
+          <span className="bulk-stat bulk-stat-ok">
+            <span className="bulk-stat-dot" /> {result.succeeded} updated
+          </span>
+          {result.failed > 0 ? (
+            <span className="bulk-stat bulk-stat-fail">
+              <span className="bulk-stat-dot" /> {result.failed} failed
+            </span>
+          ) : null}
+          {skipped > 0 ? (
+            <span className="bulk-stat bulk-stat-pending">{skipped} skipped</span>
+          ) : null}
+        </div>
+
+        <div className="bulk-modal-actions">
+          {result.failed > 0 || result.aborted ? (
+            <button type="button" className="btn-secondary" onClick={onOpenActivity}>
+              Open Activity log
+            </button>
+          ) : null}
+          <button type="button" className="btn-primary" onClick={onClose} autoFocus>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface PillProps {
   state: BulkProgressState;
   onRestore: () => void;

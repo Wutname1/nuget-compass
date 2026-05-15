@@ -2541,6 +2541,31 @@ input[type='checkbox'] {
   font-size: 0.808rem;
 }
 
+.bulk-modal-summary {
+  margin: 0.35rem 0 0;
+  font-size: 0.846rem;
+  line-height: 1.45;
+}
+
+.bulk-modal-summary-ok        { color: var(--nc-success); }
+.bulk-modal-summary-error     { color: var(--vscode-foreground); }
+.bulk-modal-summary-cancelled { color: var(--nc-warn); }
+
+.btn-primary {
+  background: var(--nc-accent);
+  color: var(--vscode-editor-background, #1e1e1e);
+  border: 0;
+  border-radius: 3px;
+  padding: 0.3rem 0.9rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+}
+
 .btn-danger {
   background: var(--nc-error);
   color: var(--vscode-editor-background, #1e1e1e);
