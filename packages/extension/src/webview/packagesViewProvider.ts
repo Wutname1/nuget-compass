@@ -88,6 +88,15 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
   /** Most recent diagnostics emitted to the view; reused when suppression toggles. */
   private lastDiagnostics: NuDiagnostic[] = [];
 
+  /**
+   * Credential env (NuGetPackageSourceCredentials_<NAME>) for the configured
+   * sources, rebuilt from the vault at the start of every scan. Threaded into
+   * every `dotnet` invocation so the vulnerability/deprecation restores auth
+   * against private feeds exactly like the workspace scan does — otherwise
+   * those restores hit a 401 (or hang on a credential prompt) for packages
+   * that only live on a private source. */
+  private scanEnv: Record<string, string> = {};
+
   /** Workspace-state key for the user's "don't show this code again" list. */
   private static readonly suppressedCodesKey = 'nuget-compass.suppressedDiagnosticCodes';
   /** Workspace-state key for the last enrichment snapshot (per-workspace cache). */
@@ -216,6 +225,8 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
       const cwdProbe = this.probeCwd();
       const sources = cwdProbe ? await listSources(cwdProbe) : [];
       const extraEnv = await this.vault.buildEnv(sources.map((s) => s.name));
+      // Reuse the same credentials for the enrichment restores (vuln/deprecated).
+      this.scanEnv = extraEnv;
 
       // Always fetch transitives. The webview filters them per the user's
       // current "Show transitive" toggle without needing a refetch.
@@ -337,9 +348,10 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     };
 
     const timeoutMs = this.dotnetCommandTimeoutMs();
+    const extraEnv = this.scanEnv;
     const [vulnsResult, depsResult, newestResults] = await Promise.allSettled([
-      scanVulnerabilities(project.path, cwd, { timeoutMs }),
-      scanDeprecations(project.path, cwd, { timeoutMs }),
+      scanVulnerabilities(project.path, cwd, { timeoutMs, extraEnv }),
+      scanDeprecations(project.path, cwd, { timeoutMs, extraEnv }),
       Promise.all(
         visiblePackages.map(async (pkg) => {
           try {
@@ -376,18 +388,14 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     if (vulnsResult.status === 'fulfilled') {
       vulnsByKey = vulnsResult.value;
     } else {
-      logger.warn(
-        `vulnerability scan failed for ${project.path}: ${describeReason(vulnsResult.reason)}`,
-      );
+      this.logEnrichScanFailure('vulnerability', project.path, vulnsResult.reason);
       vulnsByKey = new Map();
     }
     let depsByKey: DeprecationsByPackage;
     if (depsResult.status === 'fulfilled') {
       depsByKey = depsResult.value;
     } else {
-      logger.warn(
-        `deprecation scan failed for ${project.path}: ${describeReason(depsResult.reason)}`,
-      );
+      this.logEnrichScanFailure('deprecation', project.path, depsResult.reason);
       depsByKey = new Map();
     }
 
@@ -412,6 +420,30 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
     this.lastRowsByProject.set(project.path, rows);
     this.post({ type: 'host:packageRows', projectPath: project.path, rows });
     this.post({ type: 'host:projectStatus', projectPath: project.path, status: 'ready' });
+  }
+
+  /**
+   * Log a vulnerability/deprecation enrichment failure. These run an implicit
+   * restore, so a private feed without usable credentials surfaces here as a
+   * 401/403. We call that out explicitly — "permission denied" with a hint to
+   * add credentials — so the Activity log explains why the badges are missing
+   * instead of leaving a bare error (or, before the exec timeout fix, nothing
+   * at all while the restore hung).
+   */
+  private logEnrichScanFailure(
+    kind: 'vulnerability' | 'deprecation',
+    projectPath: string,
+    reason: unknown,
+  ): void {
+    const detail = describeReason(reason);
+    if (looksLikePermissionBlock(detail)) {
+      logger.warn(
+        `${kind} scan permission denied for ${projectPath}: a NuGet source rejected the restore (${firstLine(detail)}). Add credentials for the private source so its packages can be checked.`,
+        { category: 'source' },
+      );
+    } else {
+      logger.warn(`${kind} scan failed for ${projectPath}: ${detail}`, { category: 'scan' });
+    }
   }
 
   private async expandPackage(projectPath: string, packageId: string): Promise<void> {
@@ -1830,6 +1862,19 @@ export class PackagesViewProvider implements vscode.WebviewViewProvider {
 
 function describeReason(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
+}
+
+/**
+ * True when a `dotnet` failure looks like a feed auth/permission rejection
+ * (a 401/403 from a private source) rather than a generic error. Mirrors the
+ * signal detectAuthFailureForUrl looks for, but on an error string we already
+ * know came from a failed restore.
+ */
+function looksLikePermissionBlock(detail: string): boolean {
+  return (
+    /\b(401|403)\b/.test(detail) ||
+    /Unauthorized|Forbidden|credential|authenticat/i.test(detail)
+  );
 }
 
 /**

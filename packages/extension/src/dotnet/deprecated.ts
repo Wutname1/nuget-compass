@@ -10,12 +10,13 @@ export type DeprecationsByPackage = Map<string, DeprecationInfo>;
 export async function scanDeprecations(
   projectPath: string,
   cwd: string,
-  options: { timeoutMs?: number } = {},
+  options: { timeoutMs?: number; extraEnv?: Record<string, string> } = {},
 ): Promise<DeprecationsByPackage> {
   const result = await runDotnet(
     ['package', 'list', '--project', projectPath, '--deprecated', '--format', 'json'],
     cwd,
     options.timeoutMs,
+    options.extraEnv,
   );
   if (result.code !== 0 && result.stdout.trim().length === 0) {
     throw new Error(
