@@ -6,9 +6,10 @@
  * high-contrast themes. The accent is --vscode-charts-purple.
  *
  * Sizing: all font-sizes are rem-based and cascade from the :root font-size,
- * which is set to (VS Code's font-size × --ngc-font-scale). To change the
- * panel's overall text size, adjust --ngc-font-scale (driven by the
- * `nuget-compass.fontScale` setting).
+ * which is set to (VS Code's font-size × base boost × --ngc-font-scale). To
+ * change the panel's overall text size, adjust --ngc-font-scale (driven by
+ * the `nuget-compass.fontScale` setting). The 1.25 base boost makes the
+ * panel comfortably readable at fontScale = 1.
  *
  * Rem reference (root = 13px): 1rem=13, 0.923rem=12, 0.846rem=11,
  * 0.808rem=10.5, 0.769rem=10, 0.731rem=9.5, 0.692rem=9.
@@ -18,7 +19,10 @@
   color-scheme: light dark;
 
   --ngc-font-scale: 1;
-  font-size: calc(var(--vscode-font-size, 13px) * var(--ngc-font-scale));
+  --ngc-font-base-boost: 1.25;
+  font-size: calc(
+    var(--vscode-font-size, 13px) * var(--ngc-font-base-boost) * var(--ngc-font-scale)
+  );
 
   --nc-accent: var(--vscode-charts-purple, #b180d7);
   --nc-link: var(--vscode-textLink-foreground, #3794ff);

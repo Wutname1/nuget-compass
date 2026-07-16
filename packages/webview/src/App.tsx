@@ -363,27 +363,30 @@ export function App(): JSX.Element {
         </label>
 
         {state.tab === 'installed' ? (
+          <span className="seg" role="group" aria-label="Group by">
+            <button
+              type="button"
+              className={'seg-btn' + (state.groupBy === 'package' ? ' seg-btn-active' : '')}
+              onClick={() => dispatch({ type: 'setGroupBy', groupBy: 'package' })}
+              aria-pressed={state.groupBy === 'package'}
+            >
+              <ListIcon size={10} />
+              By package
+            </button>
+            <button
+              type="button"
+              className={'seg-btn' + (state.groupBy === 'project' ? ' seg-btn-active' : '')}
+              onClick={() => dispatch({ type: 'setGroupBy', groupBy: 'project' })}
+              aria-pressed={state.groupBy === 'project'}
+            >
+              <FolderIcon size={10} />
+              By project
+            </button>
+          </span>
+        ) : null}
+
+        {state.tab === 'installed' || state.tab === 'updates' ? (
           <>
-            <span className="seg" role="group" aria-label="Group by">
-              <button
-                type="button"
-                className={'seg-btn' + (state.groupBy === 'package' ? ' seg-btn-active' : '')}
-                onClick={() => dispatch({ type: 'setGroupBy', groupBy: 'package' })}
-                aria-pressed={state.groupBy === 'package'}
-              >
-                <ListIcon size={10} />
-                By package
-              </button>
-              <button
-                type="button"
-                className={'seg-btn' + (state.groupBy === 'project' ? ' seg-btn-active' : '')}
-                onClick={() => dispatch({ type: 'setGroupBy', groupBy: 'project' })}
-                aria-pressed={state.groupBy === 'project'}
-              >
-                <FolderIcon size={10} />
-                By project
-              </button>
-            </span>
             <label className="filter-label">
               <span>Framework:</span>
               <select
@@ -415,17 +418,20 @@ export function App(): JSX.Element {
                 <option value="major">Major</option>
               </select>
             </label>
-            <label className="filter-label-checkbox">
-              <input
-                type="checkbox"
-                checked={state.filters.showTransitive}
-                onChange={(e) =>
-                  applyFilters({ ...state.filters, showTransitive: e.target.checked })
-                }
-              />
-              <span>Transitive</span>
-            </label>
           </>
+        ) : null}
+
+        {state.tab === 'installed' ? (
+          <label className="filter-label-checkbox">
+            <input
+              type="checkbox"
+              checked={state.filters.showTransitive}
+              onChange={(e) =>
+                applyFilters({ ...state.filters, showTransitive: e.target.checked })
+              }
+            />
+            <span>Transitive</span>
+          </label>
         ) : null}
 
         {state.tab === 'browse' ? (

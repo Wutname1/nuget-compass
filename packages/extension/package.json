@@ -131,7 +131,7 @@
           "default": 1,
           "minimum": 0.7,
           "maximum": 1.5,
-          "description": "Scale factor applied to text in the NuGet Compass panel. 1 = default; 1.2 = 20% larger; 0.9 = 10% smaller. Useful on high-DPI displays."
+          "description": "Scale factor applied to text in the NuGet Compass panel, on top of the built-in base size. 1 = default; 1.2 = 20% larger; 0.9 = 10% smaller. Useful on high-DPI displays."
         }
       }
     }
