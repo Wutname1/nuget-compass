@@ -12,7 +12,7 @@ interface Props {
  * stack at the bottom right and cover them. This panel lives inside our own
  * surface, so it can't be hidden by another extension's noise.
  */
-export function BulkProgressModal({ state, onCancel, onMinimize }: Props): JSX.Element {
+export function BulkProgressModal({ state, onCancel, onMinimize }: Props): React.JSX.Element {
   const pct = state.total > 0 ? Math.round((state.current / state.total) * 100) : 0;
   const title =
     state.kind === 'update-all' ? 'Updating packages' : 'Bulk update';
@@ -112,7 +112,7 @@ export function BulkResultModal({
   result,
   onClose,
   onOpenActivity,
-}: ResultProps): JSX.Element {
+}: ResultProps): React.JSX.Element {
   const skipped = Math.max(0, result.total - result.succeeded - result.failed);
   const headline = result.cancelled
     ? 'Run cancelled'
@@ -190,7 +190,7 @@ interface PillProps {
  * Slim header pill shown when the modal is minimized. Click it to bring the
  * modal back; the X cancels the run.
  */
-export function BulkProgressPill({ state, onRestore, onCancel }: PillProps): JSX.Element {
+export function BulkProgressPill({ state, onRestore, onCancel }: PillProps): React.JSX.Element {
   const pct = state.total > 0 ? Math.round((state.current / state.total) * 100) : 0;
   return (
     <button

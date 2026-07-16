@@ -39,7 +39,7 @@ import {
 
 let nextToastId = 1;
 
-export function App(): JSX.Element {
+export function App(): React.JSX.Element {
   const [state, dispatch] = useReducer(reducer, {
     ...initialState,
     filters: defaultFilterState,

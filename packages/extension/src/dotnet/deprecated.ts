@@ -33,7 +33,9 @@ export function parseDeprecatedJson(raw: string): DeprecationsByPackage {
   try {
     parsed = JSON.parse(trimmed);
   } catch (err) {
-    throw new Error(`Could not parse --deprecated output: ${(err as Error).message}`);
+    throw new Error(`Could not parse --deprecated output: ${(err as Error).message}`, {
+      cause: err,
+    });
   }
 
   const out: DeprecationsByPackage = new Map();

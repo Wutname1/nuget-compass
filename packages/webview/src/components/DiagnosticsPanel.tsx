@@ -68,7 +68,7 @@ const CODE_META: Record<string, CodeMeta> = {
   },
 };
 
-export function DiagnosticsPanel(props: Props): JSX.Element | null {
+export function DiagnosticsPanel(props: Props): React.JSX.Element | null {
   const { diagnostics, suppressedCodes, fixesInFlight, fixResults } = props;
   const [collapsed, setCollapsed] = useState(false);
 
@@ -135,7 +135,7 @@ interface GroupProps {
   onDismissFixResult: Props['onDismissFixResult'];
 }
 
-function DiagnosticGroup(props: GroupProps): JSX.Element {
+function DiagnosticGroup(props: GroupProps): React.JSX.Element {
   const { code, items } = props;
   const meta = CODE_META[code];
   const headline = meta?.title ?? code;
@@ -192,7 +192,7 @@ function DiagnosticItem({
   result,
   onApplyFix,
   onDismissFixResult,
-}: ItemProps): JSX.Element {
+}: ItemProps): React.JSX.Element {
   const projectName = basename(diagnostic.projectPath);
   const label = formatLabel(diagnostic);
   return (

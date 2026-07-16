@@ -2,7 +2,7 @@ import type { AggregatedPackage, PackageInstall } from '../state/aggregate.js';
 import type { DeprecationInfo, VulnerabilityInfo } from '@nuget-compass/shared';
 
 /** Small inline badges for an aggregated (consolidated) package row. */
-export function PackageRowBadges({ pkg }: { pkg: AggregatedPackage }): JSX.Element | null {
+export function PackageRowBadges({ pkg }: { pkg: AggregatedPackage }): React.JSX.Element | null {
   const has =
     pkg.hasVulnerability || pkg.isDeprecated || pkg.isTransitive || pkg.isDivergent;
   if (!has) return null;
@@ -49,7 +49,7 @@ export function PackageRowBadges({ pkg }: { pkg: AggregatedPackage }): JSX.Eleme
 }
 
 /** Single-install badge cluster (used in the by-project list). */
-export function InstallBadges({ install }: { install: PackageInstall }): JSX.Element | null {
+export function InstallBadges({ install }: { install: PackageInstall }): React.JSX.Element | null {
   const hasVuln = install.vulnerability && install.vulnerability.length > 0;
   if (!hasVuln && !install.deprecation && !install.isTransitive) return null;
   const sev = hasVuln ? highestSeverity(install.vulnerability!) : undefined;

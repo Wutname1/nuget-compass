@@ -7,7 +7,7 @@ interface ToastProps {
   onShowOutput?: () => void;
 }
 
-export function Toast({ toast, onDismiss, onShowOutput }: ToastProps): JSX.Element | null {
+export function Toast({ toast, onDismiss, onShowOutput }: ToastProps): React.JSX.Element | null {
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(onDismiss, 4500);

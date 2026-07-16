@@ -43,7 +43,7 @@ export function ActivityPanel({
   onSetCategory,
   onClear,
   onRevealOutputChannel,
-}: Props): JSX.Element {
+}: Props): React.JSX.Element {
   // Derive the "severity floor" from the levels filter. The lowest-severity
   // level currently enabled is the floor; everything ≥ that severity shows.
   const floor: ActivityLevel = useMemo(() => {
@@ -239,7 +239,7 @@ export function ActivityPanel({
   );
 }
 
-function ActivityRow({ entry }: { entry: ActivityEntry }): JSX.Element {
+function ActivityRow({ entry }: { entry: ActivityEntry }): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const hasDetail = Boolean(entry.detail && entry.detail.trim().length > 0);
   const ctxLabel = formatContext(entry);

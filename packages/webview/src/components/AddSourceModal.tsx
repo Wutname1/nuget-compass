@@ -44,7 +44,7 @@ const FEED_PRESETS: Record<
   },
 };
 
-export function AddSourceModal({ reauthFor, onClose }: AddSourceModalProps): JSX.Element {
+export function AddSourceModal({ reauthFor, onClose }: AddSourceModalProps): React.JSX.Element {
   const isReauth = Boolean(reauthFor);
 
   const [feedType, setFeedType] = useState<FeedType>('generic');

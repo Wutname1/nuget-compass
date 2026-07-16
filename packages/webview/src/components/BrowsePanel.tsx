@@ -25,7 +25,7 @@ export function BrowsePanel({
   includePrerelease,
   selectedHitId,
   onSelectHit,
-}: BrowsePanelProps): JSX.Element {
+}: BrowsePanelProps): React.JSX.Element {
   const lastSearchedQuery = useRef('');
 
   // Re-issue the search when the prerelease filter flips and a query is active.
@@ -94,7 +94,7 @@ function BrowseResult({
   onSelect: () => void;
   onAdd: () => void;
   canAdd: boolean;
-}): JSX.Element {
+}): React.JSX.Element {
   return (
     <button
       type="button"

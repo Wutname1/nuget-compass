@@ -26,7 +26,7 @@ export function UpdatesPanel({
   selectedPackage,
   onSelect,
   onBulkUpdate,
-}: UpdatesPanelProps): JSX.Element {
+}: UpdatesPanelProps): React.JSX.Element {
   const updatable = useMemo(() => {
     const pkgs = aggregatePackages(rowsByProject, projects, false);
     return pkgs.filter((p) => p.hasUpdate);
@@ -150,7 +150,7 @@ function UpdateRow({
   selected: boolean;
   onCheck: () => void;
   onSelect: () => void;
-}): JSX.Element {
+}): React.JSX.Element {
   const updProjects = pkg.installs.filter(
     (i) => i.newestAllowed && i.newestAllowed !== i.resolvedVersion,
   );

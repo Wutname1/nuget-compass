@@ -39,7 +39,7 @@ export function InstalledList({
   filterQuery,
   selectedPackage,
   onSelect,
-}: InstalledListProps): JSX.Element {
+}: InstalledListProps): React.JSX.Element {
   const packages = useMemo(
     () => aggregatePackages(rowsByProject, projects, showTransitive),
     [rowsByProject, projects, showTransitive],
@@ -90,7 +90,7 @@ function ByPackageView({
   packages: AggregatedPackage[];
   selectedPackage: SelectedPackage | undefined;
   onSelect: (pkg: AggregatedPackage) => void;
-}): JSX.Element {
+}): React.JSX.Element {
   const byCat: Record<Category, AggregatedPackage[]> = {
     vuln: [],
     depr: [],
@@ -132,7 +132,7 @@ function CategorySection({
   items: AggregatedPackage[];
   selectedPackage: SelectedPackage | undefined;
   onSelect: (pkg: AggregatedPackage) => void;
-}): JSX.Element {
+}): React.JSX.Element {
   // 'current' (up-to-date) collapses by default to focus attention on issues.
   const [open, setOpen] = useState(cat !== 'current');
   return (
@@ -200,13 +200,13 @@ function ByPackageRow({
   pkg: AggregatedPackage;
   selected: boolean;
   onSelect: (pkg: AggregatedPackage) => void;
-}): JSX.Element {
+}): React.JSX.Element {
   const updatableProjects = pkg.installs.filter(
     (i) => i.newestAllowed && i.newestAllowed !== i.resolvedVersion,
   );
 
   // Determine target version display
-  let versionDisplay: JSX.Element;
+  let versionDisplay: React.JSX.Element;
   if (pkg.isDivergent) {
     versionDisplay = (
       <span className="pkg-target-line">
@@ -276,7 +276,7 @@ function ByPackageRow({
   );
 }
 
-function ProjectChip({ install }: { install: PackageInstall }): JSX.Element {
+function ProjectChip({ install }: { install: PackageInstall }): React.JSX.Element {
   const isUpdate = Boolean(install.newestAllowed) && install.newestAllowed !== install.resolvedVersion;
   const hasVuln = install.vulnerability && install.vulnerability.length > 0;
   const cls =
@@ -320,7 +320,7 @@ function ByProjectView({
   showTransitive: boolean;
   selectedPackage: SelectedPackage | undefined;
   onSelect: (pkg: AggregatedPackage) => void;
-}): JSX.Element {
+}): React.JSX.Element {
   // Build a quick lookup of aggregated packages by id for selection routing.
   const pkgById = useMemo(() => {
     const m = new Map<string, AggregatedPackage>();
@@ -366,7 +366,7 @@ function ProjectGroup({
   status: ProjectStatus | undefined;
   selectedPackage: SelectedPackage | undefined;
   onSelect: (pkg: AggregatedPackage) => void;
-}): JSX.Element {
+}): React.JSX.Element {
   const [open, setOpen] = useState(true);
   const updateCount = rows.filter(
     (r) => r.newestAllowed && r.newestAllowed !== r.package.resolvedVersion,
@@ -471,7 +471,7 @@ function ProjectPackageRow({
   pkg: AggregatedPackage;
   selected: boolean;
   onSelect: (pkg: AggregatedPackage) => void;
-}): JSX.Element {
+}): React.JSX.Element {
   const install: PackageInstall | undefined = pkg.installs.find(
     (i) => i.row === row,
   );

@@ -22,7 +22,7 @@ interface SourcesPanelProps {
  * VS Code's SecretStorage and are injected into dotnet at scan time via
  * NuGetPackageSourceCredentials_<NAME> env vars.
  */
-export function SourcesPanel({ sources }: SourcesPanelProps): JSX.Element | null {
+export function SourcesPanel({ sources }: SourcesPanelProps): React.JSX.Element | null {
   const [showAddModal, setShowAddModal] = useState(false);
   const [reauthFor, setReauthFor] = useState<Source | undefined>(undefined);
 
@@ -79,7 +79,7 @@ function SourceRow({
 }: {
   source: Source;
   onReauth: () => void;
-}): JSX.Element {
+}): React.JSX.Element {
   return (
     <li className={source.enabled ? '' : 'source-disabled'}>
       <div className="source-row-main">

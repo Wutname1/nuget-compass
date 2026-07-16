@@ -40,7 +40,9 @@ export function parseVulnerableJson(raw: string): VulnerabilitiesByPackage {
   try {
     parsed = JSON.parse(trimmed);
   } catch (err) {
-    throw new Error(`Could not parse --vulnerable output: ${(err as Error).message}`);
+    throw new Error(`Could not parse --vulnerable output: ${(err as Error).message}`, {
+      cause: err,
+    });
   }
 
   const out: VulnerabilitiesByPackage = new Map();

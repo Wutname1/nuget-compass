@@ -152,6 +152,7 @@ export function parsePackageListJson(
     throw new Error(
       `Could not parse dotnet package list output as JSON: ${(err as Error).message}. ` +
         `Output starts with: ${preview(trimmed)}`,
+      { cause: err },
     );
   }
   if (!isPackageListJson(parsed)) {

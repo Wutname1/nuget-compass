@@ -3,7 +3,7 @@
  * codicon style: 24x24 viewBox, currentColor stroke, no fills unless noted.
  */
 
-export function CompassIcon({ size = 14 }: { size?: number }): JSX.Element {
+export function CompassIcon({ size = 14 }: { size?: number }): React.JSX.Element {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -23,7 +23,7 @@ export function CompassIcon({ size = 14 }: { size?: number }): JSX.Element {
   );
 }
 
-export function SearchIcon({ size = 11 }: { size?: number }): JSX.Element {
+export function SearchIcon({ size = 11 }: { size?: number }): React.JSX.Element {
   return (
     <svg
       width={size}
@@ -42,7 +42,7 @@ export function SearchIcon({ size = 11 }: { size?: number }): JSX.Element {
   );
 }
 
-export function PackageIcon({ size = 32 }: { size?: number }): JSX.Element {
+export function PackageIcon({ size = 32 }: { size?: number }): React.JSX.Element {
   return (
     <svg
       width={size}
@@ -61,7 +61,7 @@ export function PackageIcon({ size = 32 }: { size?: number }): JSX.Element {
   );
 }
 
-export function WarningTriangle({ size = 32 }: { size?: number }): JSX.Element {
+export function WarningTriangle({ size = 32 }: { size?: number }): React.JSX.Element {
   return (
     <svg
       width={size}
@@ -81,7 +81,7 @@ export function WarningTriangle({ size = 32 }: { size?: number }): JSX.Element {
   );
 }
 
-export function ListIcon({ size = 10 }: { size?: number }): JSX.Element {
+export function ListIcon({ size = 10 }: { size?: number }): React.JSX.Element {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
       <rect x="2" y="3" width="12" height="2" />
@@ -91,7 +91,7 @@ export function ListIcon({ size = 10 }: { size?: number }): JSX.Element {
   );
 }
 
-export function FolderIcon({ size = 10 }: { size?: number }): JSX.Element {
+export function FolderIcon({ size = 10 }: { size?: number }): React.JSX.Element {
   return (
     <svg
       width={size}
@@ -117,7 +117,7 @@ export function NuGetLogo({
 }: {
   size?: number;
   color?: string;
-}): JSX.Element {
+}): React.JSX.Element {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -138,7 +138,7 @@ export function NuGetLogo({
   );
 }
 
-export function GearIcon({ size = 13 }: { size?: number }): JSX.Element {
+export function GearIcon({ size = 13 }: { size?: number }): React.JSX.Element {
   return (
     <svg
       width={size}
@@ -157,7 +157,7 @@ export function GearIcon({ size = 13 }: { size?: number }): JSX.Element {
   );
 }
 
-export function LockIcon({ size = 10 }: { size?: number }): JSX.Element {
+export function LockIcon({ size = 10 }: { size?: number }): React.JSX.Element {
   return (
     <svg
       width={size}

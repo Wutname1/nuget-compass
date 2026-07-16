@@ -18,7 +18,7 @@ export function ConfirmBulkUpdateModal({
   projectNames,
   onCancel,
   onConfirm,
-}: ConfirmBulkUpdateModalProps): JSX.Element | null {
+}: ConfirmBulkUpdateModalProps): React.JSX.Element | null {
   if (!items || items.length === 0) return null;
   const projectCount = items.reduce((acc, it) => acc + it.projectPaths.length, 0);
   const anyTransitive = items.some((it) => it.hasTransitive);

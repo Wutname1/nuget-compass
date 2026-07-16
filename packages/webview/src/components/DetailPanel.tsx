@@ -54,7 +54,7 @@ const TABS_UPDATES = ['Projects', 'Release notes', 'Versions', 'Description'] as
  * Brand-mark link that opens the package's nuget.org page in a new tab.
  * Sits to the left of the package name in the detail panel header.
  */
-function NuGetOrgLink({ packageId }: { packageId: string }): JSX.Element {
+function NuGetOrgLink({ packageId }: { packageId: string }): React.JSX.Element {
   return (
     <a
       className="nuget-org-link"
@@ -80,7 +80,7 @@ function tabsForContext(ctx: DetailContext): readonly string[] {
   }
 }
 
-export function DetailPanel(props: DetailPanelProps): JSX.Element {
+export function DetailPanel(props: DetailPanelProps): React.JSX.Element {
   const { selection, context } = props;
   const tabs = tabsForContext(context);
   const [tab, setTab] = useState<string>(tabs[0] ?? '');
@@ -125,7 +125,7 @@ interface InstalledInnerProps extends DetailPanelProps {
   tabs: readonly string[];
 }
 
-function InstalledDetail(props: InstalledInnerProps): JSX.Element {
+function InstalledDetail(props: InstalledInnerProps): React.JSX.Element {
   const { pkg, tab, setTab, tabs, versionsByPackage, projects, filters, readmes, onClose, onUpdateConfirm } = props;
 
   // Use the first install's project as the source of truth for fetching versions.
@@ -255,7 +255,7 @@ function ProjectsTab({
   pkg: AggregatedPackage;
   versions: AvailableVersion[] | undefined;
   onUpdateConfirm: (req: UpdateRequest) => void;
-}): JSX.Element {
+}): React.JSX.Element {
   const initialTarget = pkg.latestNewer ?? pkg.versions[0] ?? '';
   const [target, setTarget] = useState(initialTarget);
   const [selected, setSelected] = useState<Set<string>>(
@@ -386,7 +386,7 @@ function ProjectsRow({
   checked: boolean;
   onToggle: () => void;
   onUpdateConfirm: (req: UpdateRequest) => void;
-}): JSX.Element {
+}): React.JSX.Element {
   const wouldChange = target.length > 0 && install.resolvedVersion !== target;
   return (
     <div className="matrix-row">
@@ -437,7 +437,7 @@ function ProjectsRow({
   );
 }
 
-function VulnerabilityNote({ vuln }: { vuln: VulnerabilityInfo[] }): JSX.Element {
+function VulnerabilityNote({ vuln }: { vuln: VulnerabilityInfo[] }): React.JSX.Element {
   const highest = highestSeverity(vuln);
   return (
     <div className="note-bar note-bar-vuln">
@@ -485,7 +485,7 @@ function DescriptionTab({
   pkg: AggregatedPackage;
   description: string | undefined;
   versions: AvailableVersion[] | undefined;
-}): JSX.Element {
+}): React.JSX.Element {
   const meta = versions?.[0];
   return (
     <div>
@@ -534,7 +534,7 @@ function ReleaseNotesTab({
   versions,
 }: {
   versions: AvailableVersion[] | undefined;
-}): JSX.Element {
+}): React.JSX.Element {
   if (!versions) return <p className="muted">Loading release notes&hellip;</p>;
   const withNotes = versions.filter((v) => Boolean(v.releaseNotes)).slice(0, 8);
   if (withNotes.length === 0) return <p className="muted">No release notes published.</p>;
@@ -565,7 +565,7 @@ function VersionsTab({
   versions: AvailableVersion[] | undefined;
   filters: FilterState;
   onUpdateConfirm: (req: UpdateRequest) => void;
-}): JSX.Element {
+}): React.JSX.Element {
   if (!versions) return <p className="muted">Loading versions&hellip;</p>;
   if (versions.length === 0) return <p className="muted">No versions found.</p>;
 
@@ -646,7 +646,7 @@ function VersionsTab({
   );
 }
 
-function renderTfms(supported: string[], projectTfms: string[]): JSX.Element {
+function renderTfms(supported: string[], projectTfms: string[]): React.JSX.Element {
   if (supported.length === 0) return <span className="muted">unknown</span>;
   return (
     <>
@@ -675,7 +675,7 @@ function ReadmeTab({
   packageId: string;
   version: AvailableVersion;
   readmes: Record<string, ReadmeState>;
-}): JSX.Element {
+}): React.JSX.Element {
   const readme = readmes[readmeKey(packageId, version.version)];
 
   if (readme === undefined) {
@@ -713,7 +713,7 @@ function ReadmeBody({
 }: {
   body: string;
   contentType?: 'markdown' | 'html' | 'error';
-}): JSX.Element {
+}): React.JSX.Element {
   const html = useMemo(() => {
     const raw = contentType === 'html' ? body : (marked.parse(body, { async: false }) as string);
     return DOMPurify.sanitize(raw, { USE_PROFILES: { html: true } });
@@ -732,7 +732,7 @@ interface BrowseInnerProps extends DetailPanelProps {
   tabs: readonly string[];
 }
 
-function BrowseDetail(props: BrowseInnerProps): JSX.Element {
+function BrowseDetail(props: BrowseInnerProps): React.JSX.Element {
   const { hit, tab, setTab, tabs, projects, onClose } = props;
   return (
     <div className="detail-panel">
@@ -822,7 +822,7 @@ function AddToProjectsTab({
 }: {
   packageId: string;
   projects: Project[];
-}): JSX.Element {
+}): React.JSX.Element {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   function toggle(path: string): void {

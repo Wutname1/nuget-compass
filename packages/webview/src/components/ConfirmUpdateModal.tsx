@@ -16,7 +16,7 @@ export function ConfirmUpdateModal({
   projectNames,
   onCancel,
   onConfirm,
-}: ConfirmUpdateModalProps): JSX.Element | null {
+}: ConfirmUpdateModalProps): React.JSX.Element | null {
   if (!request) return null;
   const count = request.projectPaths.length;
   return (

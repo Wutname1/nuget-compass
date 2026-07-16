@@ -39,7 +39,9 @@ export function parseSearchResults(raw: string): SearchHit[] {
   try {
     parsed = JSON.parse(trimmed);
   } catch (err) {
-    throw new Error(`Could not parse dotnet package search output: ${(err as Error).message}`);
+    throw new Error(`Could not parse dotnet package search output: ${(err as Error).message}`, {
+      cause: err,
+    });
   }
   const sr = (parsed as { searchResult?: unknown }).searchResult;
   if (!Array.isArray(sr)) return [];

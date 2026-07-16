@@ -71,7 +71,6 @@ export function parseDiagnosticsFromOutput(
     }
     if (current) {
       out.push(current);
-      current = undefined;
     }
     const level: DiagnosticLevel = /\berror\b/i.test(rawLine)
       ? 'error'

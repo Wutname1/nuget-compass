@@ -5,7 +5,7 @@ import { PackageIcon, WarningTriangle } from './icons.js';
  * SDK is missing, or the active list has no rows. Each variant centers an
  * icon, a sentence-case title, and a sub-line of description.
  */
-export function NoProjectsEmpty(): JSX.Element {
+export function NoProjectsEmpty(): React.JSX.Element {
   return (
     <div className="empty-state">
       <div className="empty-icon" style={{ color: 'var(--nc-muted)' }}>
@@ -24,7 +24,7 @@ export function SdkMissingEmpty({
   onOpenLink,
 }: {
   onOpenLink?: () => void;
-}): JSX.Element {
+}): React.JSX.Element {
   return (
     <div className="empty-state">
       <div className="empty-icon" style={{ color: 'var(--nc-warn)' }}>
@@ -49,7 +49,7 @@ export function GenericEmpty({
 }: {
   title: string;
   sub?: string;
-}): JSX.Element {
+}): React.JSX.Element {
   return (
     <div className="empty-state">
       <div className="empty-icon" style={{ color: 'var(--nc-muted)' }}>

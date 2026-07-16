@@ -16,7 +16,7 @@ export function StatusBanner({
   error,
   onOpenActivity,
   cachedRowsVisible,
-}: StatusBannerProps): JSX.Element | null {
+}: StatusBannerProps): React.JSX.Element | null {
   if (error) {
     // Strip our own "Open the Activity tab for details." trailer if present so
     // we can replace it with a real button instead of static text.
