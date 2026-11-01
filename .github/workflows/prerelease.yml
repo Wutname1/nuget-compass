@@ -62,7 +62,7 @@ jobs:
         run: npx vsce publish --pre-release --packagePath nuget-compass-${{ steps.ver.outputs.version }}.vsix
 
       - name: Create GitHub pre-release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.ver.outputs.tag }}
           name: ${{ steps.ver.outputs.tag }}
